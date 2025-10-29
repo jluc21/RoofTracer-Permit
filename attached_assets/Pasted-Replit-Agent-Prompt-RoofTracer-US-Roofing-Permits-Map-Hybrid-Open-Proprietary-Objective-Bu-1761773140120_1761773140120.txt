@@ -1,0 +1,244 @@
+Replit Agent Prompt: RoofTracer “US Roofing Permits + Map” (Hybrid Open + Proprietary)
+
+Objective
+Build a minimal, production-ready MVP that:
+
+ingests roofing permits from both open portals (Socrata SODA, ArcGIS Feature Services, bulk CSV/JSON) and proprietary platforms (read-only web connectors where allowed),
+
+normalizes to a BLDS-style schema with de-dupe, provenance, and incremental sync,
+
+exposes a clean REST API, and
+
+visualizes permits on an interactive MapLibre map with clustering, popups, and filters.
+No paid services. Prioritize polling over webhooks. Be polite, rate-limited, and standards-driven.
+
+Tech & layout
+
+Backend: FastAPI, SQLAlchemy/SQLModel, Alembic, httpx.
+
+DB: Postgres (SQLite for tests). Optional PostGIS later; start with lat/lon + GeoJSON.
+
+Frontend: React + Vite, MapLibre GL (OSM tiles).
+
+Testing & quality: pytest, Schemathesis (contract), ruff, mypy, bandit, coverage≥85%.
+
+Scheduling: APScheduler (hourly/daily per source).
+
+/api        # app, routers, models, connectors, sched, normalization
+/api/tests  # unit + integration + schemathesis
+/web        # React + MapLibre SPA (clusters, popups, filters, drawer)
+/infra      # seed scripts, sample env, DB init
+README.md   .env.example  requirements.txt  package.json
+
+Canonical schema (BLDS-style)
+
+permits
+
+id uuid
+
+source_id int, source_name text, source_platform enum('socrata','arcgis','bulk','etrakit','citizenserve','bsa','mgo','accela','energov','opengov','smartgov','cityview','other')
+
+source_record_id text
+
+permit_type text, work_description text
+
+permit_status text
+
+issue_date date
+
+address_raw text, address_parsed jsonb{house_number,street,city,state,zip}
+
+parcel_id text
+
+owner_name text, contractor_name text
+
+permit_value numeric null
+
+lat numeric null, lon numeric null, geom_geojson jsonb null
+
+fingerprint text unique # deterministic idempotency
+
+ingest_ts timestamptz
+
+provenance jsonb # {platform, url, fetched_at, fields_map, checksum}
+
+raw_blob_path text null
+
+De-dupe
+fingerprint = sha256(lower(parsed_street)+city+state+coalesce(parcel_id,'')+issue_date+upper(roofing_class))
+Upsert on fingerprint.
+
+Roofing classifier
+Mark record as roofing if either:
+
+permit_type in {Roof, Roofing, Reroof, Roof Replacement, Roof Repair}, or
+
+work_description contains tokens: roof, reroof, tear off, shingle, tile roof, flat roof, TPO, torch down.
+Tokenizer + synonyms list lives in /api/normalization/roofing_rules.yaml.
+
+Connectors
+Open data (Phase 1 must ship)
+
+SocrataConnector
+
+Pagination: $limit/$offset.
+
+Filters via SoQL $where: date windows and roofing predicate (upper(permit_type) like '%ROOF%' OR upper(work_description) like '%ROOF%').
+
+Incremental: prefer last_updated/data_loaded_at; fallback to issue_date>=:last_seen.
+
+Optional app token; respect rate limits with exponential backoff.
+
+ArcGISConnector
+
+/FeatureServer/.../query?where=...&outFields=*&orderByFields=lastEditDate&resultOffset=...
+
+outSR=4326, return JSON; map geometry to lat/lon or GeoJSON.
+
+Incremental: lastEditDate or max OBJECTID.
+
+BulkFileConnector
+
+Download CSV/JSON dump for backfill; chunk-load; store checksum.
+
+Incremental: if dataset has last_updated or data_loaded_at, only fetch deltas; else pull last N days by issue_date.
+
+Proprietary platforms (Phase 2 scaffolds + one working example)
+
+Goal: responsibly fill gaps where no open portal exists. Implement per-platform read-only connectors with strict ethics and politeness.
+
+Platforms to target incrementally: eTRAKiT, Citizenserve, BS&A Online, MyGovernmentOnline (MGO), Accela, EnerGov, OpenGov, SmartGov, CityView.
+
+Common rules for proprietary connectors
+
+Respect robots.txt and published ToS. If disallowed, skip and mark source paused.
+
+Use lightweight form posts/JSON endpoints where publicly exposed; avoid headless browsers unless necessary.
+
+Throttle aggressively; jitter; cache responses; cap rows per run.
+
+If login is required or there are anti-automation terms, do not attempt automated access. Prefer: partnership, data-sharing feed, or FOIA export.
+
+Normalize to BLDS fields; record a precise provenance.fields_map.
+
+Ship one concrete example connector (pick the easiest public, no-login portal of the list) and provide stubs/interfaces for the rest.
+
+Connector interface
+
+class Connector(Protocol):
+    def validate_source(meta: dict) -> None | raises(ValidationError)
+    def backfill(source, since=None) -> Iterator[RawRow]
+    def incremental(source, state) -> Iterator[RawRow]
+    def normalize(raw: RawRow) -> NormalizedPermit
+
+
+Per-source state
+source_state: {last_max_timestamp, last_max_objectid, last_issue_date, etag, checksum}
+
+Scheduling
+
+Backfill once per source, then incremental nightly (open data) or every 2–7 days (proprietary), adjustable per source.
+
+Hard budgets per run: max_rows_per_run, max_runtime_minutes, max_requests_per_minute.
+
+Record metrics: rows_fetched, rows_upserted, errors, freshness_seconds.
+
+API (v1)
+
+GET /health, GET /version, GET /status (per-source freshness)
+
+GET /sources, POST /sources, PATCH /sources/{id}
+
+POST /sources/{id}:ingest?mode=backfill|incremental
+
+GET /permits?bbox=&city=&state=&type=&date_from=&date_to=&limit=&offset=&roofing_only=true
+
+GET /permits/{permit_id}
+
+GET /permits/cluster?bbox=&zoom= # server clusters or return raw points; pick one and implement end-to-end
+
+Frontend (React + MapLibre)
+
+Fullscreen map with OSM tiles; pan/zoom; clustered points; polygon outlines if present.
+
+Top filter bar: city, state, date range, “Roofing only,” reset.
+
+Side drawer: paginated table bound to map view; row click flies to feature + popup.
+
+URL sync: bbox, zoom, and filters in query params.
+
+Everything fast and clean; no CSS framework required.
+
+Data ethics & safeguards
+
+Adhere to robots.txt and ToS. Skip disallowed sources and log reason.
+
+Rate limit all connectors; exponential backoff; randomized user-agent pool; cache responses.
+
+Provide POLICY.md explaining rules and an opt-out path for jurisdictions.
+
+Provenance and lineage recorded on every record.
+
+Acceptance tests (must pass)
+
+Health + status endpoints OK.
+
+Socrata source: backfill completes; GET /permits?state=CA&limit=25 returns ≥1 normalized roofing record.
+
+ArcGIS source: backfill completes; at least one record renders on the map.
+
+Dedupe: ingest same rows twice → still one record (fingerprint unique).
+
+roofing_only=true only returns classified roofing permits.
+
+Contract tests (Schemathesis) pass for /openapi.json.
+
+Map: clusters at low zoom, points at high; popup shows address, type, issue date, status, contractor, “Open source” link; drawer remains in sync.
+
+Phase-2 acceptance (once a proprietary example is added)
+8) One proprietary connector (pick a publicly viewable portal with no login + permissive robots) ingests at least one jurisdiction into the same schema with provenance.
+
+Deliverables
+
+Running API + SPA on Replit staging.
+
+One Socrata and one ArcGIS source wired end-to-end.
+
+Proprietary connector interface + one real example (if legally permissible) or a mock connector with recorded fixtures and documented switch to real endpoint.
+
+README:
+
+BLDS field mapping guide.
+
+Socrata SoQL and ArcGIS /query examples for date windows.
+
+How to add proprietary sources safely (robots/ToS checks, schedules, budgets).
+
+How to enable server-side clustering and bbox queries.
+
+How to extend with demographics as choropleth layers.
+
+Seed & next steps (Agent should include)
+
+/infra/seed_source.sh that registers:
+
+one Socrata dataset (building permits with a “roof” filter),
+
+one ArcGIS FeatureService layer (permits with date filter),
+then runs backfill.
+
+/api/normalization/roofing_rules.yaml with synonyms.
+
+/api/connectors/* stubs for proprietary families, plus one working example or mocked tests.
+
+Hooks to add demographic layers later: create /api/choropleth/* placeholders and a map layer toggle, but ship disabled.
+
+What this gives you today
+
+A zoomable, clusterable permit map like the screenshot you posted, with up-to-date roofing permits from at least one Socrata city and one ArcGIS city.
+
+A BLDS-aligned API that can graft on proprietary platforms to fill nationwide gaps.
+
+Explicit ethics/rate-limit guardrails so the system is respectful and sustainable.
+
+Clean seams for your next step: sex/age/race/income choropleths as new layers using TIGER/ACS or other public stats.
