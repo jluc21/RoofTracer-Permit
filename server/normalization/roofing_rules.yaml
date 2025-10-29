@@ -1,0 +1,71 @@
+# Roofing Classification Rules
+# Used to identify roofing permits from permit_type and work_description fields
+
+permit_types:
+  exact_matches:
+    - "Roof"
+    - "Roofing"
+    - "Reroof"
+    - "Re-Roof"
+    - "Roof Replacement"
+    - "Roof Repair"
+    - "New Roof"
+    - "Roof Addition"
+    - "Roof Alteration"
+    - "Residential Roof"
+    - "Commercial Roof"
+    - "Roof Covering"
+
+  partial_matches:
+    - "roof"
+    - "reroof"
+    - "re-roof"
+
+work_description_tokens:
+  primary:
+    - "roof"
+    - "reroof"
+    - "re-roof"
+    - "roofing"
+    - "tear off"
+    - "tear-off"
+    - "tearoff"
+    - "shingle"
+    - "shingles"
+    - "tile roof"
+    - "flat roof"
+    - "pitched roof"
+    - "metal roof"
+    - "asphalt shingle"
+    
+  materials:
+    - "TPO"
+    - "EPDM"
+    - "PVC"
+    - "torch down"
+    - "torchdown"
+    - "built-up"
+    - "modified bitumen"
+    - "membrane"
+    - "slate"
+    - "wood shake"
+    - "composite"
+    - "clay tile"
+    - "concrete tile"
+    - "standing seam"
+    
+  actions:
+    - "replace roof"
+    - "install roof"
+    - "repair roof"
+    - "overlay"
+    - "recover"
+    - "coating"
+    - "waterproof"
+
+# Minimum token match threshold for classification
+# If work_description contains at least this many tokens, classify as roofing
+min_token_matches: 1
+
+# Case insensitive matching
+case_sensitive: false
