@@ -1,0 +1,86 @@
+Integrate roofing permit data from Sacramento-area jurisdictions into our application. For each data source identified, create a connector or scraper, ingest recent roofing permits, and update the PostgreSQL database and map UI. Ensure all relevant metadata is captured and sources are documented.
+
+Sources to Integrate:
+
+Sacramento County (unincorporated, incl. Fair Oaks & Orangevale) – Accela Citizen Access portal. No public API available. Write a web scraper or use an automated browser (e.g. Selenium) to search permits on the Accela portal for keywords like “roof” (or specifically retrieve records of type “Re-roof”). Parse the results to extract permit number, type, description, issue date, and address. Note: Login may not be required to search, but if needed, create a read-only account. Rate-limit queries to avoid overload. Geocode each address to latitude/longitude (use the app’s geocoding utility) for map display.
+
+City of Folsom – eTRAKiT permitting portal. Implement a connector that sends HTTP requests to eTRAKiT’s search endpoints. If possible, query by permit type = “ReRoof” or description contains “roof”. Otherwise, fetch all permits from the past ~6 months and filter client-side for “roof” in description or a roofing permit code. Handle pagination of results if applicable. Store permit metadata (permit ID, type, description, dates, address). Geocode addresses for mapping.
+
+City of Roseville – Open Data (Socrata) API. Use the Socrata API endpoint for Roseville’s “Building Permits Issued” dataset. Apply a filter in the SoQL query to retrieve only permits with descriptions or categories related to roofing (e.g. description ILIKE '%ROOF%' or permit subtype = Reroof). Fetch relevant fields: permit number, permit type, issue date, address, etc. (The dataset likely already contains these). The API returns JSON; parse it and upsert records into PostgreSQL. (No geocoding needed if the dataset provides coordinates; otherwise geocode addresses.)
+
+City of Rocklin – eTRAKiT portal. Similar to Folsom, develop a scraper or HTTP-based search. Use Rocklin’s eTRAKiT site to find roofing permits. This might involve submitting a form (simulate a POST request) for permit type “Roof” or searching by keyword. Ensure the script can handle any authenticity tokens or cookies that eTRAKiT requires. Extract permit details and geocode addresses.
+
+City of Lincoln – Accela Citizen Access (Accela cloud). Develop an automated script to query Lincoln’s Accela portal. Use the portal’s search by address or permit type: for example, search common roofing keywords or look for permit type codes (if known, e.g. some Accela systems use a code like “BLD-RES-REROOF”). If direct search is challenging, consider iterating through recent permit numbers or leveraging any unofficial Accela REST endpoints (some Accela front-ends use JSON calls – inspect network calls). Store all found roofing permit records with their metadata. Geocode addresses.
+
+City of Auburn – Tyler EnerGov (Citizen Access). Check if Auburn’s portal allows public searches without login. If yes, use the public search feature to find permits with “roof” in the description. If it requires login, automate a login with stored credentials (contact Auburn for a guest account if possible). Alternatively, since Auburn partnered with Symbium for solar, see if Auburn provides an open data export – if not, scraping is the fallback. Ensure to capture permit info and geocode addresses.
+
+El Dorado Hills (El Dorado County) – eTRAKiT (El Dorado County). Use the El Dorado County eTRAKiT site to search permits in the El Dorado Hills area. Likely filter by city or ZIP (El Dorado Hills zip codes) plus keyword “roof”. Automate the search and parse results. Include permit metadata and geocode. (El Dorado County’s eTRAKiT might list all permits countywide, so ensure we only ingest those for El Dorado Hills community – possibly determined by address city field).
+
+Citrus Heights – PermitCity (Four Leaf). This system does not allow broad public data extraction. Approach: Contact Citrus Heights’ building department to obtain recent roofing permit data directly. If a direct feed is not available, you may skip automated ingestion for this one due to access limitations. (If the city agrees to share data via CSV or API, incorporate that by parsing the provided data.) Document this source in our system as manually updated.
+
+Development Steps:
+
+Connector Implementation: For each of the above sources, write a script or module in our pipeline (e.g. using Python requests, Selenium, or Node.js as appropriate) to fetch the roofing permit records. Abstract common functions (like address geocoding and database upsert). Use configuration for API URLs, portal links, credentials, etc.
+
+Metadata Mapping: Map the fields from each source to our database schema. For example:
+
+permit_number, permit_type, description, issue_date, address, status, source_jurisdiction, latitude, longitude, etc.
+Ensure that permit_type/description clearly indicate it’s a roofing permit (the word “roof” should appear, or use a boolean flag in our DB if needed to mark as roofing).
+
+Filtering Logic: Implement filters at the source whenever possible to minimize data volume:
+
+Socrata (Roseville) – use SoQL query to filter.
+
+Accela/eTRAKiT – use query parameters or form inputs to limit to roofing (if unavailable, retrieve a reasonable timeframe of permits and filter in code).
+
+Verify the filter catches variations (“reroof”, “re-roof”, “roofing”, etc.).
+
+Database Backfill: Insert the collected permit records into the PostgreSQL database:
+
+Use upsert operations keyed by permit number + jurisdiction to avoid duplicates.
+
+Include a source ID or name field to trace which city/county the record comes from.
+
+Backfill at least the last one year of roofing permits for each area (or as much as data is available via the source).
+
+Mark the timestamp of data retrieval for each source.
+
+Post-ingestion Verification: After backfilling:
+
+Query the database to ensure new roofing permits are present and the count seems reasonable (e.g. hundreds of records per city if expected).
+
+Spot-check a few records for accuracy (correct address, permit type contains “roof”, etc.).
+
+Ensure latitude/longitude are populated (geocoding success rate). For any failures in geocoding, consider using an alternate geocoder or marking them for manual correction.
+
+Map UI Integration: The MapLibre front-end should automatically include new permit points if they’re in the database. Verify this by:
+
+Checking the MapLibre view for the respective regions (Sacramento area) to see clusters of new points.
+
+Ensure clustering behaves properly – if many new permits were added, the cluster counts should reflect that.
+
+Use location filters on the map (if available in the UI) to filter by city or region to confirm permits show up in the correct areas.
+
+If permits are not showing, ensure the API that feeds MapLibre (perhaps /permits endpoint) is including these new records. Update the API logic if it filters by date or source.
+
+API Endpoints Update: Update the app’s /permits API endpoint data:
+
+The endpoint should now return the newly added roofing permits. If the endpoint has pagination or supports querying by area, test those with the new data.
+
+Update the /sources endpoint (or configuration) to list each new data source:
+
+e.g., add entries for “Sacramento County Building Permits (Roofing) – via Accela scrape, updated weekly”, “Roseville Building Permits – via Open Data API, updated daily”, etc.
+
+Include metadata such as the last update timestamp for each source, and any reliability notes (e.g. “Citrus Heights – updated via manual data import, quarterly”).
+
+Scheduling & Maintenance: Set up automated jobs to regularly run these connectors:
+
+Socrata API (Roseville) can run daily (since data updates daily).
+
+Accela/eTRAKiT scrapers – perhaps run weekly or bi-weekly (to gather new permits; these systems might not publish real-time open data so scraping periodically is necessary). Adjust frequency based on volume and city update speed.
+
+Build in error handling and notifications: if a source fails (e.g. website down or layout changed), log the error and alert us so we can fix the scraper promptly.
+
+Ensure compliance with any terms-of-service for the public portals (do not overwhelm with requests; a moderate crawling rate with caching of already seen permits is recommended).
+
+By following these steps, the agent will ingest all available roofing permits from the targeted jurisdictions, populate the database, and make them visible on the map with clustering and filtering. All permits will include full metadata and be attributed to their source. The system’s /permits and /sources endpoints will be updated accordingly, allowing end-users and internal stakeholders to see the origin of the data and its freshness. Prioritize robust, maintainable code for each connector (given that portal HTML structures can change) and accuracy of data (double-check that only roofing-related permits are ingested). Once integrated, this comprehensive dataset of roofing permits can be used in the application for analytics, notifications, or display to users, just as planned.
