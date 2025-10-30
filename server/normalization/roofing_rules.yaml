@@ -63,6 +63,34 @@ work_description_tokens:
     - "coating"
     - "waterproof"
 
+# Exclusions - if any of these terms appear, do NOT classify as roofing
+# This prevents false positives from permits that mention roofing but aren't roofing work
+exclusions:
+  # Solar-related exclusions
+  - "solar panel"
+  - "photovoltaic"
+  - "PV system"
+  - "solar array"
+  - "solar installation"
+  - "solar mount"
+  
+  # HVAC-related exclusions
+  - "HVAC"
+  - "heating"
+  - "cooling"
+  - "air condition"
+  - "furnace"
+  - "heat pump"
+  - "AC unit"
+  - "ventilation"
+  
+  # Other non-roofing work
+  - "satellite dish"
+  - "antenna"
+  - "skylight only"  # Allow if combined with roofing work
+  - "gutter only"     # Allow if combined with roofing work
+  - "chimney only"    # Allow if combined with roofing work
+
 # Minimum token match threshold for classification
 # If work_description contains at least this many tokens, classify as roofing
 min_token_matches: 1

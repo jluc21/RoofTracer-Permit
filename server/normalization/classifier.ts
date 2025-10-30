@@ -16,6 +16,7 @@ interface RoofingRules {
     materials: string[];
     actions: string[];
   };
+  exclusions?: string[];
   min_token_matches: number;
   case_sensitive: boolean;
 }
@@ -35,7 +36,21 @@ function loadRoofingRules(): RoofingRules {
 export function classifyAsRoofing(permitType: string | null, workDescription: string | null): boolean {
   const rules = loadRoofingRules();
   
-  // Check permit type first
+  // Check for exclusions first - if any exclusion term is found, not roofing
+  const combinedText = [permitType, workDescription].filter(Boolean).join(' ');
+  if (combinedText && rules.exclusions && rules.exclusions.length > 0) {
+    const normalizedCombined = rules.case_sensitive ? combinedText : combinedText.toLowerCase();
+    
+    for (const exclusion of rules.exclusions) {
+      const normalizedExclusion = rules.case_sensitive ? exclusion : exclusion.toLowerCase();
+      if (normalizedCombined.includes(normalizedExclusion)) {
+        // Exclusion found - this is not a roofing permit
+        return false;
+      }
+    }
+  }
+  
+  // Check permit type
   if (permitType) {
     const normalizedType = rules.case_sensitive ? permitType : permitType.toLowerCase();
     
