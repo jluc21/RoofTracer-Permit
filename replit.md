@@ -17,6 +17,34 @@ RoofTracer is a production-ready mapping platform that ingests and visualizes ro
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (October 30, 2025)
+
+### Sacramento-Area Integration Project
+
+**Accela Connector Proof-of-Concept:**
+- Built foundation for Accela Citizen Access portal integration (`server/connectors/accela.ts`)
+- Demonstrated architecture for proprietary platform connectors (browser automation pattern)
+- Created comprehensive extension guide (`docs/accela-connector-guide.md`)
+- Registered Accela platform in connector factory (`server/routes.ts`)
+
+**Architecture Documented:**
+- Playwright-based web scraping pattern for ASP.NET WebForms portals
+- Geocoding service integration strategy (Nominatim/Google/Mapbox)
+- Address parsing and normalization for varied municipal formats
+- Pagination handling and rate limiting for portal scraping
+
+**Production Requirements Identified:**
+- Browser automation tooling (Playwright installation and configuration)
+- Geocoding API integration (chose Nominatim for free tier, 1 req/sec)
+- Agency-specific HTML selectors and field mappings
+- Session management and error recovery strategies
+
+**Status:** Proof-of-concept complete. Full production implementation requires:
+1. Playwright browser installation (`npx playwright install chromium`)
+2. Geocoding service setup (Nominatim recommended for open-source compliance)
+3. Sacramento County-specific form selectors and result parsing
+4. Testing with 100-1000 permit sample for accuracy validation
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -50,11 +78,12 @@ Preferred communication style: Simple, everyday language.
 - `/api/health` - System health checks
 - `/api/status` - Per-source freshness metrics
 
-**Data Connectors:** Pluggable connector architecture (Socrata, ArcGIS) implementing a common interface:
-- `validate()` - Verify configuration before ingestion
-- `backfill()` - Full historical sync (AsyncIterator pattern)
-- `incremental()` - Fetch only new/updated records
-- `normalize()` - Transform source data to canonical schema
+**Data Connectors:** Pluggable connector architecture implementing a common interface:
+- **Socrata** (`server/connectors/socrata.ts`) - Production-ready for SODA API portals
+- **ArcGIS** (`server/connectors/arcgis.ts`) - Production-ready for Feature Services  
+- **Accela** (`server/connectors/accela.ts`) - Proof-of-concept for Citizen Access portals
+- Connector Interface: `validate()`, `backfill()`, `incremental()`, `normalize()`
+- See `docs/accela-connector-guide.md` for proprietary platform integration patterns
 
 **Rate Limiting:** Built-in rate limiter with exponential backoff and jitter prevents overwhelming external APIs. Configurable per-source with `max_requests_per_minute` and retry logic.
 

@@ -248,6 +248,9 @@ async function runIngestion(sourceId: number, mode: "backfill" | "incremental") 
     connector = new SocrataConnector(source.max_requests_per_minute || 10);
   } else if (source.platform === "arcgis") {
     connector = new ArcGISConnector(source.max_requests_per_minute || 10);
+  } else if (source.platform === "accela") {
+    const { AccelaConnector } = await import("./connectors/accela");
+    connector = new AccelaConnector(source.max_requests_per_minute || 10);
   } else {
     throw new Error(`Unsupported platform: ${source.platform}`);
   }
