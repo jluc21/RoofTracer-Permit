@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { load } from 'cheerio';
+import { chromium, Browser, Page } from 'playwright';
 import {
   Connector,
   ConnectorConfig,
@@ -67,84 +68,160 @@ export class AccelaConnector implements Connector {
   ): AsyncIterableIterator<NormalizedPermit> {
     const accelaConfig = config as AccelaConfig;
     
-    // NOTE: This is a simplified implementation that demonstrates the pattern.
-    // Full production implementation would require:
-    // 1. Browser automation (Playwright) to handle ASP.NET ViewState and AJAX
-    // 2. Session management and cookie handling
-    // 3. Pagination through search results
-    // 4. Geocoding service integration for addresses
-    
-    console.log(`[Accela] Starting backfill for ${sourceName}`);
-    console.log(`[Accela] Config: ${JSON.stringify(accelaConfig, null, 2)}`);
-    
-    // PROOF-OF-CONCEPT: Sample fixture data demonstrating the pattern
-    // In production, this would use Playwright to:
-    // 1. Navigate to the search page
-    // 2. Fill in search form with date ranges and keywords
-    // 3. Submit search and parse results table
-    // 4. Click through to detail pages for full permit info
-    // 5. Extract addresses and other metadata
-    
-    console.log(`[Accela] Proof-of-concept connector - using sample fixture data`);
-    console.log(`[Accela] Production implementation requires:`);
-    console.log(`[Accela]   1. Playwright browser automation`);
-    console.log(`[Accela]   2. HTML parsing with Cheerio`);
-    console.log(`[Accela]   3. Geocoding service (Nominatim recommended)`);
-    console.log(`[Accela] See docs/accela-connector-guide.md for full implementation`);
-    
-    // Sample results representing typical Accela portal data
-    // These demonstrate the normalization pipeline without requiring browser automation
-    const mockResults: AccelaSearchResult[] = [
-      {
-        permit_number: 'BLD2024-00123',
-        permit_type: 'Re-Roof',
-        status: 'Issued',
-        issue_date: '2024-10-15',
-        address: '700 H Street, Sacramento, CA 95814',
-        description: 'Residential re-roof - remove existing composition shingles and install new GAF Timberline HDZ shingles',
-        detail_url: `${accelaConfig.base_url}/Cap/CapDetail.aspx?id=BLD2024-00123`,
-      },
-      {
-        permit_number: 'BLD2024-00456',
-        permit_type: 'Re-Roof',
-        status: 'Finaled',
-        issue_date: '2024-09-22',
-        address: '9283 Greenback Lane, Orangevale, CA 95662',
-        description: 'Commercial re-roof - TPO membrane installation on flat roof, 5000 sq ft',
-        detail_url: `${accelaConfig.base_url}/Cap/CapDetail.aspx?id=BLD2024-00456`,
-      },
-      {
-        permit_number: 'BLD2024-00789',
-        permit_type: 'Roof Repair',
-        status: 'Issued',
-        issue_date: '2024-10-28',
-        address: '100 Main Street, Roseville, CA 95678',
-        description: 'Emergency roof repair - replace damaged section after tree damage, approximately 200 sq ft',
-        detail_url: `${accelaConfig.base_url}/Cap/CapDetail.aspx?id=BLD2024-00789`,
-      },
-    ];
-    
+    console.log(`[Accela] Starting LIVE backfill for ${sourceName}`);
     console.log(`[Accela] Portal: ${accelaConfig.base_url}`);
     console.log(`[Accela] Module: ${accelaConfig.module || 'Building'}`);
-    console.log(`[Accela] Sample data: ${mockResults.length} fixture permits`);
+    console.log(`[Accela] Search keywords: ${JSON.stringify(accelaConfig.search_keywords || ['roof', 'reroof', 're-roof'])}`);
     
-    // Transform mock results to normalized permits
-    let count = 0;
-    for (const result of mockResults) {
-      if (count >= maxRows) break;
+    let browser: Browser | null = null;
+    try {
+      // Launch Playwright browser
+      console.log('[Accela] Launching browser...');
+      browser = await chromium.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
       
-      const normalized = await this.normalizePermit(
-        result,
-        sourceId,
-        sourceName,
-        accelaConfig
-      );
+      const page = await browser.newPage();
+      await page.setViewportSize({ width: 1280, height: 720 });
       
-      yield normalized;
-      count++;
+      // Navigate to the Accela portal
+      const searchUrl = `${accelaConfig.base_url}/Cap/CapHome.aspx?module=${accelaConfig.module || 'Building'}`;
+      console.log(`[Accela] Navigating to: ${searchUrl}`);
+      await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 30000 });
+      
+      // Try to find and perform search
+      const results = await this.performSearch(page, accelaConfig);
+      console.log(`[Accela] Found ${results.length} permit results from live portal`);
+      
+      // Yield normalized permits
+      let count = 0;
+      for (const result of results) {
+        if (count >= maxRows) break;
+        
+        const normalized = await this.normalizePermit(
+          result,
+          sourceId,
+          sourceName,
+          accelaConfig
+        );
+        
+        yield normalized;
+        count++;
+      }
+      
+      console.log(`[Accela] Backfill complete: ${count} LIVE permits processed`);
+      
+    } catch (error) {
+      console.error('[Accela] Browser automation error:', error);
+      throw error;
+    } finally {
+      if (browser) {
+        await browser.close();
+        console.log('[Accela] Browser closed');
+      }
+    }
+  }
+
+  private async performSearch(
+    page: Page,
+    config: AccelaConfig
+  ): Promise<AccelaSearchResult[]> {
+    const results: AccelaSearchResult[] = [];
+    const keywords = config.search_keywords || ['roof', 'reroof', 're-roof'];
+    
+    try {
+      // Wait for page to be ready
+      await page.waitForLoadState('networkidle');
+      
+      // Look for search input fields - Accela portals vary by agency
+      // Common patterns: record type search, keyword search, or advanced search
+      
+      // Try to find keyword/description search field
+      const searchInput = await page.locator('input[type="text"]').first();
+      if (await searchInput.isVisible({ timeout: 5000 })) {
+        // Enter search keywords (try "roof" as primary keyword)
+        await searchInput.fill(keywords[0]);
+        console.log(`[Accela] Entered keyword: ${keywords[0]}`);
+        
+        // Find and click search button
+        const searchButton = page.locator('input[type="submit"], button[type="submit"]').first();
+        if (await searchButton.isVisible({ timeout: 2000 })) {
+          await searchButton.click();
+          console.log('[Accela] Clicked search button');
+          
+          // Wait for results to load
+          await page.waitForLoadState('networkidle');
+          await page.waitForTimeout(2000);
+        }
+      }
+      
+      // Parse results table
+      const tableHtml = await page.content();
+      const $ = load(tableHtml);
+      
+      // Look for results table (common Accela patterns)
+      const rows = $('table tr').slice(1, 50); // Skip header, limit to 50 rows
+      console.log(`[Accela] Found ${rows.length} table rows to parse`);
+      
+      rows.each((i, row) => {
+        const cells = $(row).find('td');
+        if (cells.length < 2) return;
+        
+        // Extract data from cells (structure varies by agency)
+        // Typical columns: Record#, Type, Status, Date, Address, Description
+        const permitNumber = $(cells[0]).text().trim();
+        const permitType = cells.length > 1 ? $(cells[1]).text().trim() : '';
+        const status = cells.length > 2 ? $(cells[2]).text().trim() : '';
+        const issueDate = cells.length > 3 ? $(cells[3]).text().trim() : '';
+        const address = cells.length > 4 ? $(cells[4]).text().trim() : '';
+        const description = cells.length > 5 ? $(cells[5]).text().trim() : '';
+        
+        // Only include if we have a permit number
+        if (permitNumber && permitNumber.length > 3) {
+          results.push({
+            permit_number: permitNumber,
+            permit_type: permitType || undefined,
+            status: status || undefined,
+            issue_date: this.parseDate(issueDate) || undefined,
+            address: address || undefined,
+            description: description || undefined,
+            detail_url: `${config.base_url}/Cap/CapDetail.aspx?id=${encodeURIComponent(permitNumber)}`,
+          });
+        }
+      });
+      
+    } catch (error) {
+      console.error('[Accela] Search error:', error);
+      // If search fails, return empty results rather than throwing
     }
     
-    console.log(`[Accela] Backfill complete: ${count} permits processed`);
+    return results;
+  }
+
+  private parseDate(dateStr: string): string | null {
+    if (!dateStr || dateStr.trim() === '') return null;
+    
+    try {
+      // Try to parse common date formats: MM/DD/YYYY, YYYY-MM-DD, etc.
+      const cleaned = dateStr.trim();
+      
+      // If already in ISO format
+      if (/^\d{4}-\d{2}-\d{2}/.test(cleaned)) {
+        return cleaned.split('T')[0];
+      }
+      
+      // Try MM/DD/YYYY
+      const match = cleaned.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (match) {
+        const [, month, day, year] = match;
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   async *incremental(
