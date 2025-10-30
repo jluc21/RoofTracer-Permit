@@ -10,8 +10,9 @@ import {
   type Permit,
   type InsertPermit,
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
+import { GeocodingService } from "./services/geocoding";
 
 export interface IStorage {
   // Sources
@@ -240,3 +241,11 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+// Initialize geocoding service
+export const geocodingService = new GeocodingService(pool);
+
+// Initialize geocoding cache table on startup
+geocodingService.initializeCacheTable().catch(error => {
+  console.error('Failed to initialize geocoding cache:', error);
+});

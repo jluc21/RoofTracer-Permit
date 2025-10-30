@@ -1,0 +1,42 @@
+Task: Scale the Sacramento-region roofing permit integration to production readiness by expanding data collection to all key jurisdictions and improving reliability.
+Scope: Extend the current Sacramento County Accela connector to include new connectors for each jurisdiction/platform and integrate them into the map API. Implement robust error handling and ensure full visibility of permits on the map.
+
+Requirements:
+
+Connectors for Multiple Jurisdictions: Build connectors for each permit system:
+
+Accela: Sacramento County (existing) and City of Lincoln. Reuse a generalized Accela scraper that searches the Accela Citizen Access portal for recent permits
+aca-prod.accela.com
+.
+
+eTRAKiT: City of Folsom, City of Rocklin, and El Dorado County (covering El Dorado Hills). Use Playwright browser automation to perform permit searches on each eTRAKiT portal (simulate form inputs and scrape results)
+edc-trk.aspgov.com
+. Parameterize the connector for different city URLs.
+
+Socrata Open Data: City of Roseville. Utilize the Socrata Open Data API to fetch building permit records in JSON (no scraping – use HTTP requests)
+roseville.ca.us
+. Filter or query for roofing permits data as needed.
+
+Tyler EnerGov: City of Auburn. Automate the Citizen Self-Service portal (Playwright to log in if required) to search for recent permits (likely by date range). Scrape permit listings for addresses and details.
+
+PermitCity/Four Leaf: City of Citrus Heights. Note that public scraping is not possible (portal restricted)
+citrusheights.net
+. Implement a placeholder connector that either remains empty or reads from a manual data source (to be provided) so Citrus Heights can be included once data is obtained.
+
+Modular Architecture: Organize the code with a connectors/ directory. Define a common interface or base class Connector that all connectors implement (e.g., a method to fetch permits). Refactor the Sacramento Accela logic into this structure. Ensure connectors output data in a uniform format (standard permit fields).
+
+Geocoding Integration: Integrate a geocoding step using the Nominatim OSM API for converting addresses to lat/long. Throttle geocoding requests (max 1 per second) and include a unique User-Agent per Nominatim’s policy
+operations.osmfoundation.org
+. Implement caching of geocoding results to avoid repeat lookups for the same address. If a geocode fails, retry with slight delay and handle exceptions so the pipeline continues.
+
+Roofing Permit Classification: Improve the logic that filters roofing permits. Expand the keyword list (e.g., “reroof”, “roofing”, “shingles”, “tear off”) and handle variations and case insensitivity. Add exclusions for terms like “solar” or “HVAC” to avoid false positives (e.g., solar panel permits). Apply this classification uniformly to permits from all sources (e.g., in the permit parsing stage or right after data fetch).
+
+Rate Limiting & Anti-blocking: Add delays and randomization to scraping actions to prevent IP blocks. For Playwright connectors, use short random waits between page interactions. For HTTP requests, respect any rate limits (for APIs like Socrata). Use rotating or custom User-Agent strings to avoid detection. Ensure the connectors only run at a reasonable frequency (e.g., daily) and use incremental queries to minimize load.
+
+Error Handling and Resilience: Implement try/catch around each connector’s main process so that a failure in one source doesn’t stop the others. Log errors with details (which source, what step) for debugging. If a site’s format changes, the connector should fail gracefully (e.g., return no data rather than crashing) and record a warning. Incorporate status tracking for each source (e.g., last successful run time, error message if any).
+
+Map API Integration: Consolidate all permits from the connectors and prepare them for the /permits API response. Ensure each permit has coordinates (from geocoding) and a source identifier. Also update the /sources API to list all jurisdictions with metadata (name, platform, last update time, permit count, etc.). This gives full transparency on the frontend map about which areas are covered and up to date.
+
+Citrus Heights Fallback: Since Citrus Heights data isn’t available via scraping, design the system to accept manual data input for this one source. (For example, be ready to import a CSV of Citrus Heights permits if provided, and merge it with the scraped data.) Clearly comment or document how to plug in Citrus Heights data when it becomes available.
+
+Outcome: The agent should produce code updates that introduce the new connectors, adhere to the above guidelines (throttling, logging, error handling), and fully integrate the data such that a user of the map can see roofing permits from Sacramento County, Folsom, Rocklin, El Dorado Hills, Lincoln, Auburn, and (if provided) Citrus Heights. The solution should be maintainable and modular, making it easy to adjust to any future changes. Test each connector individually and then the end-to-end data flow. Ensure that for each API endpoint (/permits, /sources), the data reflects the combined results of all connectors with no regression in functionality.

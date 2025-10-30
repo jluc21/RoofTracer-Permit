@@ -9,6 +9,7 @@ import {
   exponentialBackoff,
 } from './base';
 import { classifyAsRoofing } from '../normalization/classifier';
+import { geocodingService } from '../storage';
 
 interface AccelaConfig extends ConnectorConfig {
   agency_name: string; // e.g., "Sacramento County"
@@ -99,7 +100,7 @@ export class AccelaConnector implements Connector {
         permit_type: 'Re-Roof',
         status: 'Issued',
         issue_date: '2024-10-15',
-        address: '1234 Oak Street, Fair Oaks, CA 95628',
+        address: '700 H Street, Sacramento, CA 95814',
         description: 'Residential re-roof - remove existing composition shingles and install new GAF Timberline HDZ shingles',
         detail_url: `${accelaConfig.base_url}/Cap/CapDetail.aspx?id=BLD2024-00123`,
       },
@@ -108,7 +109,7 @@ export class AccelaConnector implements Connector {
         permit_type: 'Re-Roof',
         status: 'Finaled',
         issue_date: '2024-09-22',
-        address: '5678 Pine Avenue, Orangevale, CA 95662',
+        address: '9283 Greenback Lane, Orangevale, CA 95662',
         description: 'Commercial re-roof - TPO membrane installation on flat roof, 5000 sq ft',
         detail_url: `${accelaConfig.base_url}/Cap/CapDetail.aspx?id=BLD2024-00456`,
       },
@@ -117,7 +118,7 @@ export class AccelaConnector implements Connector {
         permit_type: 'Roof Repair',
         status: 'Issued',
         issue_date: '2024-10-28',
-        address: '9012 Elm Court, Sacramento, CA 95821',
+        address: '100 Main Street, Roseville, CA 95678',
         description: 'Emergency roof repair - replace damaged section after tree damage, approximately 200 sq ft',
         detail_url: `${accelaConfig.base_url}/Cap/CapDetail.aspx?id=BLD2024-00789`,
       },
@@ -270,14 +271,32 @@ export class AccelaConnector implements Connector {
     state?: string;
     zip?: string;
   }): Promise<{ lat: number | null; lon: number | null }> {
-    // Placeholder for geocoding implementation
-    // In production, this would use:
-    // - Nominatim (OpenStreetMap, free, rate-limited)
-    // - Google Geocoding API (requires API key, paid)
-    // - Mapbox Geocoding (requires API key, generous free tier)
-    
-    // For now, return null coordinates
-    return { lat: null, lon: null };
+    try {
+      // Build full address string for geocoding
+      const addressParts = [];
+      if (addressParsed.house_number) addressParts.push(addressParsed.house_number);
+      if (addressParsed.street) addressParts.push(addressParsed.street);
+      if (addressParsed.city) addressParts.push(addressParsed.city);
+      if (addressParsed.state) addressParts.push(addressParsed.state);
+      if (addressParsed.zip) addressParts.push(addressParsed.zip);
+      
+      const fullAddress = addressParts.join(' ');
+      
+      if (!fullAddress.trim()) {
+        console.log('[Accela] Empty address, skipping geocoding');
+        return { lat: null, lon: null };
+      }
+      
+      console.log(`[Accela] Geocoding address: ${fullAddress}`);
+      
+      // Use Nominatim geocoding service with caching and rate limiting
+      const result = await geocodingService.geocode(fullAddress);
+      console.log(`[Accela] Geocoded result: lat=${result.lat}, lon=${result.lon}`);
+      return { lat: result.lat, lon: result.lon };
+    } catch (error) {
+      console.error('[Accela] Geocoding error:', error);
+      return { lat: null, lon: null };
+    }
   }
 
   private async fetchAccelaPage(url: string): Promise<string> {
