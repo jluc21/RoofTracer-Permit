@@ -19,7 +19,42 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 30, 2025)
 
-### Sacramento-Area Integration Project
+### Sacramento-Area Integration Project - Session 2
+
+**Geocoding Service - COMPLETED ✅**
+- Implemented production-ready Nominatim geocoding service (`server/services/geocoding.ts`)
+- **Rate limiting:** 1.1 seconds between requests (respects Nominatim's 1 req/sec policy)
+- **Dual caching strategy:**
+  - In-memory cache for fast lookups within single ingestion run
+  - Database cache (`geocode_cache` table) for persistence across runs
+- **Error handling:** Exponential backoff with retries, graceful null handling
+- **Integration:** Fully integrated into Accela connector, ready for other connectors
+- **Validation:** Tested with 3 real Sacramento-area addresses - all geocoded successfully
+
+**Enhanced Roofing Classification - COMPLETED ✅**
+- Added exclusion filter system to prevent false positives
+- **15+ exclusion terms:** solar panels, photovoltaic, HVAC, heating, cooling, furnace, etc.
+- **Smart logic:** Exclusions checked FIRST before classification to avoid misclassification
+- **Updated classifier:** Modified `server/normalization/classifier.ts` to use exclusion rules
+- **Rules file:** Enhanced `server/normalization/roofing_rules.yaml` with exclusions section
+
+**Lincoln Integration - COMPLETED ✅**
+- Added City of Lincoln as Source ID 6 (Accela platform)
+- **Portal URL:** https://aca-prod.accela.com/lincolnca
+- **Connector:** Reuses existing AccelaConnector (agency-agnostic architecture)
+- **Configuration:** Building module with roof/reroof/re-roof keyword search
+
+**Jurisdictional Research Findings:**
+- **Roseville:** Has Socrata portal BUT current dataset (6tvk-exbt) is restricted/requires auth, legacy dataset (buxi-gsvq) lacks address fields → Deprioritized
+- **Lincoln:** Accela portal identified and configured → Ready for production automation
+- **Remaining:** Folsom, Rocklin, El Dorado County (eTRAKiT), Auburn (Tyler EnerGov), Citrus Heights (unknown) require further research and browser automation
+
+**Active Data Sources:**
+1. Sacramento County (Accela) - Source ID 5
+2. City of Lincoln (Accela) - Source ID 6
+3. _Future:_ Folsom, Rocklin, El Dorado County, Auburn, Citrus Heights
+
+### Earlier Work (October 30, 2025)
 
 **Accela Connector Proof-of-Concept:**
 - Built foundation for Accela Citizen Access portal integration (`server/connectors/accela.ts`)
@@ -29,20 +64,14 @@ Preferred communication style: Simple, everyday language.
 
 **Architecture Documented:**
 - Playwright-based web scraping pattern for ASP.NET WebForms portals
-- Geocoding service integration strategy (Nominatim/Google/Mapbox)
+- Geocoding service integration strategy (Nominatim selected for free tier)
 - Address parsing and normalization for varied municipal formats
 - Pagination handling and rate limiting for portal scraping
 
-**Production Requirements Identified:**
-- Browser automation tooling (Playwright installation and configuration)
-- Geocoding API integration (chose Nominatim for free tier, 1 req/sec)
-- Agency-specific HTML selectors and field mappings
-- Session management and error recovery strategies
-
-**Status:** Proof-of-concept complete. Full production implementation requires:
+**Production Requirements for Full Accela Automation:**
 1. Playwright browser installation (`npx playwright install chromium`)
-2. Geocoding service setup (Nominatim recommended for open-source compliance)
-3. Sacramento County-specific form selectors and result parsing
+2. Agency-specific HTML selectors and field mappings (Sacramento County, Lincoln)
+3. Session management and error recovery strategies
 4. Testing with 100-1000 permit sample for accuracy validation
 
 ## System Architecture

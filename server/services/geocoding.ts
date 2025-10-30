@@ -169,14 +169,15 @@ export class GeocodingService {
         
         const error = `HTTP ${response.status}: ${response.statusText}`;
         console.error(`[Geocoding] Failed to geocode "${address}": ${error}`);
-        const result: GeocodeResult = { lat: null, lon: null, error };
-        await this.setCachedGeocode(address, result);
-        return result;
+        // DO NOT cache transient failures - allow retry on next run
+        return { lat: null, lon: null, error };
       }
 
       const data = await response.json();
 
       if (!Array.isArray(data) || data.length === 0) {
+        // Cache "no results found" since this is a valid Nominatim response
+        // indicating the address doesn't exist in OpenStreetMap
         const result: GeocodeResult = { 
           lat: null, 
           lon: null, 
@@ -206,9 +207,8 @@ export class GeocodingService {
 
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[Geocoding] Failed to geocode "${address}": ${errorMsg}`);
-      const result: GeocodeResult = { lat: null, lon: null, error: errorMsg };
-      await this.setCachedGeocode(address, result);
-      return result;
+      // DO NOT cache network/exception errors - allow retry on next run
+      return { lat: null, lon: null, error: errorMsg };
     }
   }
 
