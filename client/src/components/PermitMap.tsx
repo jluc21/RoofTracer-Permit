@@ -160,14 +160,16 @@ export function PermitMap({
         const source = map.current.getSource('permits') as maplibregl.GeoJSONSource;
         
         if (source && clusterId !== undefined) {
-          source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
-            if (err || !map.current) return;
+          source.getClusterExpansionZoom(clusterId).then((zoom: number) => {
+            if (!map.current) return;
             
             const coordinates = (features[0].geometry as any).coordinates;
             map.current.easeTo({
               center: coordinates,
               zoom: zoom,
             });
+          }).catch((err) => {
+            console.error('Failed to get cluster expansion zoom:', err);
           });
         }
       });
