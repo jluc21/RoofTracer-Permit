@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { createRoot } from 'react-dom/client';
 import type { MapBounds, PermitMarker } from '@/types/map';
 import { PermitPopup } from './PermitPopup';
 import { Loader2 } from 'lucide-react';
@@ -283,15 +285,13 @@ export function PermitMap({
       const popupNode = document.createElement('div');
       popupNode.setAttribute('data-permit-popup', '');
       
-      import('react-dom/client').then(({ createRoot }) => {
-        const root = createRoot(popupNode);
-        root.render(
-          <PermitPopup
-            permit={selectedPermit}
-            onClose={() => setSelectedPermit(null)}
-          />
-        );
-      });
+      const root = createRoot(popupNode);
+      root.render(
+        <PermitPopup
+          permit={selectedPermit}
+          onClose={() => setSelectedPermit(null)}
+        />
+      );
 
       popupRef.current = new maplibregl.Popup({
         closeButton: false,

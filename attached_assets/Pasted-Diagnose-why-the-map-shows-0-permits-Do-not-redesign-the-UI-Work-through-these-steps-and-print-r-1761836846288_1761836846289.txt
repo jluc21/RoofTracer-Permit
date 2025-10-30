@@ -1,0 +1,87 @@
+Diagnose why the map shows “0 permits.” Do not redesign the UI. Work through these steps and print results after each step.
+
+Health + versions
+
+Hit GET /api/health and GET /api/version and print both.
+
+Database reality check
+
+Run:
+
+SELECT count(*) AS total
+FROM permits;
+SELECT count(*) AS with_coords
+FROM permits
+WHERE lat IS NOT NULL AND lon IS NOT NULL;
+SELECT count(*) AS roofing
+FROM permits
+WHERE is_roofing = 1;
+
+
+If with_coords = 0, the issue is geometry extraction.
+
+Socrata geometry extraction fix
+
+Update the Socrata connector to populate lat, lon, and geom_geojson.
+
+Support these common field patterns automatically (pick whichever exists in each dataset):
+
+location (object with latitude/longitude)
+
+the_geom (WKT/GeoJSON point)
+
+location_1 or point or coordinates
+
+If only address is present, skip geocoding for now; just ensure Austin (3syk-w9eu) and SF (i98e-djp9) get lat/lon from their point fields.
+
+Keep rate-limit/backoff intact. No schema changes needed.
+
+Roofing classifier sanity
+
+Expand server/normalization/roofing_rules.yaml with tokens: roof, reroof, re-roof, tear off, overlay, shingle, tile, TPO, EPDM, mod bit, torch down. Keep exact/partial rules for permit_type.
+
+Re-ingest
+
+Run backfills:
+
+POST /api/sources/1/ingest?mode=backfill (Austin)
+
+POST /api/sources/2/ingest?mode=backfill (SF)
+
+Print the ingest summary: rows fetched, upserted, errors.
+
+DB re-check
+
+Re-run the SQL from step 2 and print counts again. Confirm with_coords > 0.
+
+API smoke tests
+
+Print sample:
+
+GET /api/permits?limit=3
+
+GET /api/permits?state=TX&limit=3
+
+GET /api/permits?state=CA&limit=3
+
+GET /api/permits?bbox=-98.05,30.07,-97.55,30.47&limit=3 (Austin bbox)
+
+GET /api/permits?bbox=-122.53,37.70,-122.35,37.83&limit=3 (SF bbox)
+
+Add a simple /sources UI page
+
+In the React app, add a page at /sources that lists sources from GET /api/sources, shows basic stats (enabled, last run), and provides a Backfill button that calls POST /api/sources/:id/ingest?mode=backfill. Keep it minimal (table or cards).
+
+Acceptance criteria (print these lines when done):
+
+“Health OK”
+
+“Permits total: X, with_coords: Y, roofing: Z”
+
+“Austin bbox returns ≥1 record”
+
+“San Francisco bbox returns ≥1 record”
+
+“/sources page available with Backfill buttons”
+
+If any step fails, fix it and retry until acceptance criteria pass.
