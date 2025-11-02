@@ -17,9 +17,49 @@ RoofTracer is a production-ready mapping platform that ingests and visualizes ro
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (October 30, 2025)
+## Recent Changes (November 2, 2025)
 
-### Sacramento-Area Integration Project - Session 2
+### Full Pipeline Demonstration - COMPLETE ✅
+
+**End-to-End Validation:**
+- **3 Sacramento-area test permits** successfully processed through complete pipeline:
+  1. `700 H Street, Sacramento, CA 95814` → Geocoded (38.5816, -121.5015)
+  2. `9283 Greenback Lane, Orangevale, CA 95662` → Geocoded (38.6835, -121.2226)
+  3. `100 Main Street, Roseville, CA 95678` → Geocoded (38.7521, -121.2883)
+- All permits stored in database with `is_roofing=1`, valid coordinates, and complete provenance metadata
+- **Map display verified:** Permits accessible at `http://localhost:5000/?bbox=-122,38,-121,39&roofing=1`
+- **Geocoding caching confirmed:** Nominatim results cached in both memory and `geocode_cache` table
+
+**Production Deployment Guide - COMPLETE ✅**
+- Created comprehensive 800+ line deployment guide (`docs/production-deployment-guide.md`)
+- **4 hosting options documented:**
+  1. Railway (easiest, auto-scaling)
+  2. Fly.io (best performance, edge deployment)
+  3. Render (free tier available)
+  4. VPS (full control, cheapest at scale)
+- **Playwright Docker setup:** Recommends official Playwright Docker images (mcr.microsoft.com/playwright) to avoid dependency management
+- **Scheduled ingestion:** Fixed Railway cron configuration (uses public HTTPS URL instead of localhost), documented node-cron alternative
+- **Complete sections:**
+  - System requirements (Playwright browser dependencies)
+  - Environment variables and secrets management
+  - Database migration and source seeding
+  - Ingestion runners (manual, cron, scheduled jobs)
+  - Rate limiting strategies (Nominatim 1 req/sec, Accela anti-ban)
+  - Security best practices (SSL, CORS, secret rotation)
+  - Monitoring and logging (platform-native + Sentry)
+  - Performance optimization (indexing, connection pooling, CDN)
+  - Cost estimates for each platform
+  - Troubleshooting guide
+
+**Technical Decisions:**
+- **Official Docker images preferred:** Using `mcr.microsoft.com/playwright:v1.48.0-jammy` eliminates dependency management complexity
+- **Accela connector ready for production:** Playwright automation code complete, requires non-Replit hosting
+- **Geocoding not cached on failure:** Transient errors (rate limits, network) are NOT cached to allow retry on next run
+- **Cron jobs use HTTPS:** Railway/Render cron must call public URLs (not localhost) as they run in separate containers
+
+### Earlier Work (October 30, 2025)
+
+**Sacramento-Area Integration Project - Session 2**
 
 **Geocoding Service - COMPLETED ✅**
 - Implemented production-ready Nominatim geocoding service (`server/services/geocoding.ts`)
@@ -33,7 +73,7 @@ Preferred communication style: Simple, everyday language.
 
 **Enhanced Roofing Classification - COMPLETED ✅**
 - Added exclusion filter system to prevent false positives
-- **15+ exclusion terms:** solar panels, photovoltaic, HVAC, heating, cooling, furnace, etc.
+- **20+ exclusion terms:** solar panels, photovoltaic, HVAC, heating, cooling, furnace, etc.
 - **Smart logic:** Exclusions checked FIRST before classification to avoid misclassification
 - **Updated classifier:** Modified `server/normalization/classifier.ts` to use exclusion rules
 - **Rules file:** Enhanced `server/normalization/roofing_rules.yaml` with exclusions section
@@ -44,17 +84,12 @@ Preferred communication style: Simple, everyday language.
 - **Connector:** Reuses existing AccelaConnector (agency-agnostic architecture)
 - **Configuration:** Building module with roof/reroof/re-roof keyword search
 
-**Jurisdictional Research Findings:**
-- **Roseville:** Has Socrata portal BUT current dataset (6tvk-exbt) is restricted/requires auth, legacy dataset (buxi-gsvq) lacks address fields → Deprioritized
-- **Lincoln:** Accela portal identified and configured → Ready for production automation
-- **Remaining:** Folsom, Rocklin, El Dorado County (eTRAKiT), Auburn (Tyler EnerGov), Citrus Heights (unknown) require further research and browser automation
-
 **Active Data Sources:**
 1. Sacramento County (Accela) - Source ID 5
 2. City of Lincoln (Accela) - Source ID 6
-3. _Future:_ Folsom, Rocklin, El Dorado County, Auburn, Citrus Heights
+3. _Future:_ Folsom, Rocklin, El Dorado County (eTRAKiT), Auburn (Tyler EnerGov), Citrus Heights
 
-### Earlier Work (October 30, 2025)
+### Earlier Work (October 30, 2025) - Session 1
 
 **Accela Connector Proof-of-Concept:**
 - Built foundation for Accela Citizen Access portal integration (`server/connectors/accela.ts`)
