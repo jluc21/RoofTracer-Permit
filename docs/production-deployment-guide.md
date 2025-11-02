@@ -27,11 +27,32 @@ This guide covers deploying RoofTracer with **full Playwright browser automation
 ```dockerfile
 FROM node:20-bullseye
 WORKDIR /app
+
+# Install Playwright system dependencies BEFORE copying package files
+# This ensures Chromium can launch successfully
+# Complete list from official Playwright install-deps manifest
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fonts-liberation fonts-noto-color-emoji ttf-unifont \
+    libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 \
+    libcairo2 libcups2 libdbus-1-3 libdrm2 libegl1 libgbm1 \
+    libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 \
+    libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 \
+    libxext6 libxfixes3 libxrandr2 libxshmfence1 libxkbcommon0 \
+    libfontconfig1 libfreetype6 xfonts-cyrillic xfonts-scalable \
+    fonts-ipafont-gothic fonts-wqy-zenhei fonts-tlwg-loma-otf \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node dependencies
 COPY package*.json ./
 RUN npm install
-RUN npx playwright install --with-deps chromium
+
+# Install Playwright browsers (system deps already installed above)
+RUN npx playwright install chromium
+
+# Copy application code and build
 COPY . .
 RUN npm run build
+
 CMD ["npm", "start"]
 ```
 
@@ -121,32 +142,128 @@ pm2 startup
 ## System Requirements
 
 ### Playwright Browser Dependencies
-All hosting options must support these system packages (automatically handled by Debian/Ubuntu base images):
+All hosting options must support these system packages for Chromium to launch successfully.
 
-**Required Libraries:**
-- `libglib2.0-0` (GLib core)
-- `libnspr4`, `libnss3` (Network Security Services)
-- `libdbus-1-3` (D-Bus message bus)
-- `libatk1.0-0`, `libatk-bridge2.0-0` (Accessibility toolkit)
-- `libx11-6`, `libxcb1`, `libxcomposite1`, `libxdamage1`, `libxext6`, `libxfixes3`, `libxrandr2` (X11 display libraries)
-- `libxkbcommon0` (Keyboard handling)
-- `libgbm1` (GPU buffer management)
-- `libasound2` (Audio - required even for headless mode)
-- `chromium` or `chromium-browser` (Playwright can bundle its own, but system Chromium reduces Docker image size)
+**Official Complete Package List (from Playwright install-deps manifest):**
 
-**Install with Playwright:**
+This list mirrors the packages installed by `npx playwright install-deps chromium` on Debian/Ubuntu systems. Missing even one package can cause "Host system is missing dependencies" errors.
+
+```bash
+# Core Chromium dependencies
+libnss3                  # Network Security Services
+libnspr4                 # Netscape Portable Runtime
+libatk1.0-0              # Accessibility toolkit
+libatk-bridge2.0-0       # ATK-to-AT-SPI bridge
+libatspi2.0-0            # Assistive Technology SPI
+libcups2                 # CUPS printing support
+libdrm2                  # Direct Rendering Manager
+libgbm1                  # GPU buffer management
+libasound2               # Audio library
+libxkbcommon0            # Keyboard handling
+libdbus-1-3              # D-Bus message bus
+libglib2.0-0             # GLib core library
+libegl1                  # EGL graphics library
+
+# X11 display libraries
+libx11-6                 # X11 client library
+libx11-xcb1              # X11/XCB bridge
+libxcb1                  # X protocol C-language Binding
+libxcomposite1           # X Composite extension
+libxdamage1              # X Damage extension
+libxext6                 # X11 miscellaneous extensions
+libxfixes3               # X Fixes extension
+libxrandr2               # X Resize and Rotate extension
+libxshmfence1            # X shared memory fences
+
+# GTK and rendering
+libgtk-3-0               # GTK 3 toolkit
+libpango-1.0-0           # Pango text layout
+libcairo2                # Cairo 2D graphics library
+libfontconfig1           # Font configuration
+libfreetype6             # FreeType font rendering
+
+# Fonts (required for proper text rendering)
+fonts-liberation         # Liberation fonts (Arial/Times/Courier alternatives)
+fonts-noto-color-emoji   # Color emoji support
+ttf-unifont              # Unicode fonts
+xfonts-cyrillic          # Cyrillic fonts
+xfonts-scalable          # Scalable fonts
+fonts-ipafont-gothic     # Japanese fonts
+fonts-wqy-zenhei         # Chinese fonts
+fonts-tlwg-loma-otf      # Thai fonts
+```
+
+**Source:** https://github.com/microsoft/playwright/tree/main/utils/docker
+
+**Installation Methods:**
+
+**Option 1: Let Playwright Handle It (Recommended)**
 ```bash
 npx playwright install --with-deps chromium
+```
+This automatically installs all system dependencies on Debian/Ubuntu. Works on VPS but **NOT in Dockerfiles** (requires sudo).
+
+**Option 2: Manual apt-get (For Dockerfiles - COMPLETE LIST)**
+```bash
+apt-get update && apt-get install -y --no-install-recommends \
+  fonts-liberation fonts-noto-color-emoji ttf-unifont \
+  libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 \
+  libcairo2 libcups2 libdbus-1-3 libdrm2 libegl1 libgbm1 \
+  libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 \
+  libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 \
+  libxext6 libxfixes3 libxrandr2 libxshmfence1 libxkbcommon0 \
+  libfontconfig1 libfreetype6 xfonts-cyrillic xfonts-scalable \
+  fonts-ipafont-gothic fonts-wqy-zenhei fonts-tlwg-loma-otf \
+  && rm -rf /var/lib/apt/lists/*
+
+npx playwright install chromium
+```
+
+**Option 3: Playwright System-Wide Install (VPS Only)**
+```bash
+# On Ubuntu/Debian VPS
+sudo npx playwright install-deps chromium
+npx playwright install chromium
 ```
 
 **Dockerfile Best Practice:**
 ```dockerfile
 FROM node:20-bullseye
 
-# Install Playwright dependencies
-RUN npx playwright install-deps chromium
+# Install ALL Playwright system dependencies explicitly
+# This list matches the official Playwright install-deps manifest
+# Do NOT rely on `install-deps` in Docker (requires sudo)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fonts-liberation fonts-noto-color-emoji ttf-unifont \
+    libasound2 libatk-bridge2.0-0 libatk1.0-0 libatspi2.0-0 \
+    libcairo2 libcups2 libdbus-1-3 libdrm2 libegl1 libgbm1 \
+    libglib2.0-0 libgtk-3-0 libnspr4 libnss3 libpango-1.0-0 \
+    libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxdamage1 \
+    libxext6 libxfixes3 libxrandr2 libxshmfence1 libxkbcommon0 \
+    libfontconfig1 libfreetype6 xfonts-cyrillic xfonts-scalable \
+    fonts-ipafont-gothic fonts-wqy-zenhei fonts-tlwg-loma-otf \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node dependencies
+COPY package*.json ./
+RUN npm install
+
+# Install Playwright Chromium browser only (deps already installed)
+RUN npx playwright install chromium
 
 # Continue with app setup...
+```
+
+**Verification Command:**
+To see what Playwright would install on your system:
+```bash
+npx playwright install-deps chromium --dry-run
+```
+
+**Verification:**
+After installation, test Playwright can launch:
+```bash
+node -e "const { chromium } = require('playwright'); (async () => { const browser = await chromium.launch(); await browser.close(); console.log('Chromium launched successfully!'); })()"
 ```
 
 ---
@@ -292,11 +409,31 @@ Railway:
 # railway.toml
 [[cron]]
 schedule = "0 2 * * *"  # 2 AM daily
-command = "curl -X POST http://localhost:5000/api/sources/5/ingest"
+# IMPORTANT: Use public HTTPS URL, not localhost (cron runs in separate container)
+command = "curl -X POST https://rooftracer.up.railway.app/api/sources/5/ingest -H 'Content-Type: application/json' -d '{\"force\":false}'"
+```
+
+**Alternative: Internal Script (No External HTTP Call)**
+```yaml
+# railway.toml
+[[cron]]
+schedule = "0 2 * * *"
+command = "node scripts/ingest-cron.js"
+```
+
+`scripts/ingest-cron.js`:
+```javascript
+import { runIngestion } from '../server/routes.js';
+
+const sources = [5, 6]; // Sacramento County, Lincoln
+for (const sourceId of sources) {
+  await runIngestion(sourceId, 'incremental');
+  console.log(`Ingestion completed for source ${sourceId}`);
+}
 ```
 
 Render:
-Use "Cron Jobs" feature in dashboard (separate service type)
+Use "Cron Jobs" feature in dashboard (separate service type - runs as isolated job, not in web container)
 
 **Option B: Node.js Cron (All Platforms)**
 Add `node-cron` to run ingestion internally:
