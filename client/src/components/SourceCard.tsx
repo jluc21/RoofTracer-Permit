@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, RefreshCw, Settings } from 'lucide-react';
+import { Play, Pause, RefreshCw, Settings, Loader2 } from 'lucide-react';
 import type { Source, SourceState } from '@shared/schema';
 
 interface SourceCardProps {
@@ -19,6 +19,8 @@ export function SourceCard({
   onToggleEnabled,
   isLoading = false,
 }: SourceCardProps) {
+  const isRunning = state?.is_running === 1;
+  
   const formatDate = (date: Date | null) => {
     if (!date) return 'Never';
     return new Date(date).toLocaleString('en-US', {
@@ -38,8 +40,11 @@ export function SourceCard({
   return (
     <Card className="hover-elevate" data-testid={`source-card-${source.id}`}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-3">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-foreground">{source.name}</h3>
+        <div className="space-y-1 flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-semibold text-foreground">{source.name}</h3>
+            {isRunning && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+          </div>
           <Badge variant={getPlatformColor(source.platform)} className="text-xs">
             {source.platform}
           </Badge>
@@ -48,7 +53,7 @@ export function SourceCard({
           size="icon"
           variant={source.enabled ? "default" : "outline"}
           onClick={() => onToggleEnabled(source.id, !source.enabled)}
-          disabled={isLoading}
+          disabled={isLoading || isRunning}
           className="h-8 w-8"
           data-testid={`button-toggle-${source.id}`}
         >
@@ -56,6 +61,17 @@ export function SourceCard({
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
+        {isRunning && state?.status_message && (
+          <div className="bg-primary/10 border border-primary/20 rounded-md px-3 py-2">
+            <p className="text-sm text-foreground font-medium flex items-center gap-2">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              {state.status_message}
+            </p>
+            {state.current_page && state.current_page > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">Page {state.current_page}</p>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Last Sync</p>
@@ -90,7 +106,7 @@ export function SourceCard({
             size="sm"
             variant="outline"
             onClick={() => onTriggerIngest(source.id, 'incremental')}
-            disabled={isLoading || !source.enabled}
+            disabled={isLoading || !source.enabled || isRunning}
             className="flex-1"
             data-testid={`button-sync-${source.id}`}
           >
@@ -101,10 +117,11 @@ export function SourceCard({
             size="sm"
             variant="outline"
             onClick={() => onTriggerIngest(source.id, 'backfill')}
-            disabled={isLoading || !source.enabled}
+            disabled={isLoading || !source.enabled || isRunning}
             className="flex-1"
             data-testid={`button-backfill-${source.id}`}
           >
+            {isRunning ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
             Backfill
           </Button>
         </div>
