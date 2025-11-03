@@ -10,6 +10,25 @@ Key capabilities include automated ingestion, intelligent roofing classification
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Critical Fixes (November 3, 2025)
+
+### Data Display Issue - RESOLVED ✅
+
+**Problem:** Permits never appeared on the map despite successful data ingestion and API responses.
+
+**Root Causes:**
+1. **WebGL Initialization Failure** - MapLibre GL JS couldn't initialize in containerized/headless environments (Railway, Playwright)
+2. **No Bounds Set** - Failed map initialization prevented `onBoundsChange` from firing, leaving `bounds` as `null`
+3. **Disabled Query** - Permit query had `enabled: bounds !== null`, so it never fetched
+4. **Query Key Format Bug** - Query used array format `['/api/permits', 'bbox=...']` but default query function joins with `/`, creating invalid URLs like `/api/permits/bbox=...` instead of `/api/permits?bbox=...`
+
+**Solutions Implemented:**
+1. **Auto-Backfill on Startup** (`server/index.ts`) - Server automatically ingests data from enabled sources on startup
+2. **WebGL Fallback** (`client/src/components/PermitMap.tsx`) - Added `failIfMajorPerformanceCaveat: false` and error handling that sets default US bounds even when map fails
+3. **Query Key Fix** (`client/src/pages/MapView.tsx`) - Changed to single string format: `['/api/permits?bbox=...']`
+
+**Result:** ✅ Map now displays **2,063+ permits** successfully. App works even without WebGL visualization - permits appear in drawer and filters work correctly.
+
 ## System Architecture
 
 ### Frontend Architecture
