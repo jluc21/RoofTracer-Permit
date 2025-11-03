@@ -1,0 +1,98 @@
+[Region: asia-southeast1]
+==============
+Using Nixpacks
+==============
+
+context: tlgv-00
+╔═════════════════════ Nixpacks v1.38.0 ═════════════════════╗
+║ setup      │ nodejs_20, npm-9_x                            ║
+║────────────────────────────────────────────────────────────║
+║ caddy      │ pkgs: caddy                                   ║
+║            │ cmds: caddy fmt --overwrite /assets/Caddyfile ║
+║────────────────────────────────────────────────────────────║
+║ install    │ npm install                                   ║
+║────────────────────────────────────────────────────────────║
+║ build      │ ./build.sh                                    ║
+║────────────────────────────────────────────────────────────║
+║ start      │ NODE_ENV=production node dist/index.js        ║
+╚════════════════════════════════════════════════════════════╝
+
+internal
+load build definition from Dockerfile
+0ms
+
+internal
+load metadata for ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+287ms
+
+internal
+load .dockerignore
+0ms
+
+internal
+load build context
+0ms
+
+stage-0
+WORKDIR /app/ cached
+0ms
+
+[ 3/15] COPY .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix
+23ms
+
+[ 4/15] RUN nix-env -if .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix && nix-collect-garbage -d
+41s
+36 store paths deleted, 243.63 MiB freed
+
+[ 5/15] COPY .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix
+93ms
+
+[ 6/15] RUN nix-env -if .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix && nix-collect-garbage -d
+2m 17s
+61 store paths deleted, 559.57 MiB freed
+
+[ 7/15] COPY .nixpacks/assets /assets/
+216ms
+
+[ 8/15] COPY . /app/.
+112ms
+
+[ 9/15] RUN  caddy fmt --overwrite /assets/Caddyfile
+380ms
+
+1
+COPY . /app/.
+58ms
+
+1
+RUN  npm install
+21s
+Run `npm audit` for details.
+
+1
+COPY . /app/.
+247ms
+
+1
+RUN  ./build.sh
+13s
+Build complete!
+
+1
+RUN printf '\nPATH=/app/node_modules/.bin:$PATH' >> /root/.profile
+927ms
+
+1
+COPY . /app
+43ms
+
+auth
+sharing credentials for production-asia-southeast1-eqsg3a.railway-registry.com
+0ms
+
+importing to docker
+15s
+=== Successfully Built! ===
+Run:
+docker run -it production-asia-southeast1-eqsg3a.railway-registry.com/de5bb8ef-b213-4bd5-886f-152d68663c31:4df77206-31fd-4ad8-8f72-3a9230d4fbf6
+Build time: 281.45 seconds
