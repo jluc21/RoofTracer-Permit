@@ -2,7 +2,7 @@
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm ci && npm run build && npm prune --production"
+    "buildCommand": "npm ci && vite build && npm run build && npm prune --production"
   },
   "deploy": {
     "startCommand": "NODE_ENV=production node dist/index.js",

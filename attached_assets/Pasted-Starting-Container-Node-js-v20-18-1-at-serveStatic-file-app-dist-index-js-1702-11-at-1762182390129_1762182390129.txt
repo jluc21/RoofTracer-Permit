@@ -1,0 +1,78 @@
+Starting Container
+Node.js v20.18.1
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v20.18.1
