@@ -207,8 +207,40 @@ async function seedDataSources() {
       max_requests_per_minute: 10,
     });
 
-    console.log("[db-init] ✓ Seeded 4 data sources (2 Accela disabled, 2 Socrata enabled)");
-    console.log("[db-init] To ingest permits, visit the Admin page and click 'Ingest Now' on enabled sources");
+    // Boston, MA - Socrata
+    await storage.createSource({
+      name: "Boston, MA - Building Permits",
+      platform: "socrata",
+      endpoint_url: "https://data.boston.gov",
+      config: {
+        dataset_id: "msk6-43c6",
+        app_token: null,
+      },
+      enabled: 1,
+      schedule_cron: "0 6 * * *",
+      max_rows_per_run: 5000,
+      max_runtime_minutes: 30,
+      max_requests_per_minute: 10,
+    });
+
+    // Seattle, WA - Socrata
+    await storage.createSource({
+      name: "Seattle, WA - Building Permits",
+      platform: "socrata",
+      endpoint_url: "https://data.seattle.gov",
+      config: {
+        dataset_id: "76t5-zqzr",
+        app_token: null,
+      },
+      enabled: 1,
+      schedule_cron: "0 7 * * *",
+      max_rows_per_run: 5000,
+      max_runtime_minutes: 30,
+      max_requests_per_minute: 10,
+    });
+
+    console.log("[db-init] ✓ Seeded 6 data sources (2 Accela disabled, 4 Socrata enabled)");
+    console.log("[db-init] To ingest permits, visit /sources and click 'Backfill' on enabled sources");
   } catch (error) {
     console.error("[db-init] Failed to seed data sources:", error);
     throw error;

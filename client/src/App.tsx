@@ -31,13 +31,14 @@ function App() {
         <div className="fixed bottom-4 left-4 z-10 flex flex-col gap-2">
           <Link href="/sources">
             <Button
-              size="icon"
-              variant="secondary"
+              size="default"
+              variant="default"
               className="shadow-lg"
-              title="Manage Sources"
+              title="Manage Sources & Ingest Data"
               data-testid="button-nav-sources"
             >
-              <Database className="h-5 w-5" />
+              <Database className="h-5 w-5 mr-2" />
+              Admin
             </Button>
           </Link>
           <Link href="/status">
