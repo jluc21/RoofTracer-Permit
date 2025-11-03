@@ -1,0 +1,79 @@
+npm run build && npm start
+26s
+npm warn config production Use `--omit=dev` instead.
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+vite v5.4.20 building for production...
+transforming...
+Browserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+✓ 1683 modules transformed.
+rendering chunks...
+computing gzip size...
+../dist/public/index.html                     1.07 kB │ gzip:   0.56 kB
+../dist/public/assets/index-CUCQqQEu.css    140.61 kB │ gzip:  21.57 kB
+../dist/public/assets/index-Z6wjiPJV.js   1,282.78 kB │ gzip: 361.78 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 4.66s
+
+  dist/index.js  63.4kb
+
+⚡ Done in 8ms
+npm warn config production Use `--omit=dev` instead.
+
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+
+4:00:58 AM [express] serving on port 5000
+[Geocoding] Failed to initialize cache table: ErrorEvent {
+  [Symbol(kTarget)]: WebSocket {
+    _events: [Object: null prototype] {
+      error: [Function],
+      message: [Function],
+      close: [Function],
+      open: [Function]
+    },
+    _eventsCount: 4,
+    _maxListeners: undefined,
+    _binaryType: 'arraybuffer',
+    _closeCode: 1006,
+    _closeFrameReceived: false,
+    _closeFrameSent: false,
+    _closeMessage: <Buffer >,
+    _closeTimer: null,
+    _errorEmitted: true,
+    _extensions: {},
+    _paused: false,
+    _protocol: '',
+    _readyState: 3,
+    _receiver: null,
+    _sender: null,
+    _socket: null,
+    _bufferedAmount: 0,
+    _isServer: false,
+    _redirects: 0,
+    _autoPong: true,
+    _url: 'wss://postgres.railway.internal/v2',
+    _req: null,
+    [Symbol(shapeMode)]: false,
+    [Symbol(kCapture)]: false
+  },
+  [Symbol(kType)]: 'error',
+  [Symbol(kError)]: Error: getaddrinfo ENOTFOUND postgres.railway.internal
+      at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+    errno: -3008,
+    code: 'ENOTFOUND',
+    syscall: 'getaddrinfo',
+    hostname: 'postgres.railway.internal'
+  },
+  [Symbol(kMessage)]: 'getaddrinfo ENOTFOUND postgres.railway.internal'
+}
