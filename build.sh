@@ -37,6 +37,12 @@ fi
 
 echo "✓ Backend build successful ($(du -sh dist/index.js | cut -f1))"
 
+# Copy required assets to dist
+echo ""
+echo "Copying required assets..."
+cp server/normalization/roofing_rules.yaml dist/roofing_rules.yaml
+echo "✓ Copied roofing_rules.yaml to dist/"
+
 echo ""
 echo "======================================"
 echo "Build complete! ✓"
