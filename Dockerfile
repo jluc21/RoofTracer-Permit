@@ -8,13 +8,23 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (including Playwright)
-RUN npm ci
+# Use --no-cache to ensure fresh installs without cached modules
+RUN npm ci --no-cache
 
 # Copy source code
 COPY . .
 
+# Clear any build artifacts that might have been copied
+# This ensures we always build fresh on Railway
+RUN rm -rf dist node_modules/.vite .vite
+
 # Make build script executable and run it
+# The build script will verify both frontend and backend build successfully
 RUN chmod +x build.sh && ./build.sh
+
+# Verify critical files exist after build
+RUN ls -lh dist/public/index.html dist/index.js || \
+    (echo "ERROR: Build verification failed!" && exit 1)
 
 # Expose port
 EXPOSE 8080

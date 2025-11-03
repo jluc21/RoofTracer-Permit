@@ -113,3 +113,67 @@ ACCELA_USE_PLAYWRIGHT=true
 4. **Seattle, WA** (Socrata) - Building permits
 5. **Sacramento County** (Accela) - Roofing permits via Playwright
 6. **City of Lincoln** (Accela) - Roofing permits via Playwright
+
+## Troubleshooting Railway Deployments
+
+### Issue: Frontend Not Updating (Missing Buttons/Features)
+
+**Symptoms:**
+- New UI components don't appear on deployed site
+- Buttons missing on data source cards
+- Old version of frontend showing even after redeploy
+
+**Root Cause:**
+Railway/Docker may cache build artifacts, preventing fresh frontend builds.
+
+**Solution:**
+
+1. **Clear Railway Build Cache**
+   - Railway Dashboard → Your Service → Settings
+   - Scroll to "Danger Zone"
+   - Click "Clear Build Cache"
+   - Redeploy the service
+
+2. **Force Fresh Build via Git**
+   ```bash
+   # Make a trivial change to force rebuild
+   git commit --allow-empty -m "chore: force Railway rebuild"
+   git push
+   ```
+
+3. **Verify Build Logs**
+   - Check Railway Deployments tab
+   - Look for successful Vite build: `✓ Frontend build successful (1.4M)`
+   - Confirm backend build: `✓ Backend build successful (72K)`
+
+4. **Clear Browser Cache**
+   - Hard refresh: Ctrl+Shift+R (Windows) or Cmd+Shift+R (Mac)
+   - Or use Incognito/Private browsing window
+
+### Issue: Playwright Not Working
+
+**Symptoms:**
+- Accela sources using demo/fixture data instead of live scraping
+- No real permits from Sacramento/Lincoln appearing on map
+
+**Solution:**
+
+1. **Verify Environment Variable**
+   - Railway Dashboard → Variables tab
+   - Ensure `ACCELA_USE_PLAYWRIGHT=true` is set
+   - Redeploy after adding variable
+
+2. **Check Build Image**
+   - Verify Dockerfile uses Playwright image: `mcr.microsoft.com/playwright:v1.48.0-jammy`
+   - This includes all browser dependencies needed for scraping
+
+### Build Process Details
+
+The build system now includes:
+- **Cache clearing**: Removes all Vite caches before building
+- **Build verification**: Confirms frontend and backend files exist
+- **Error handling**: Fails fast if build steps don't complete
+
+Build artifacts:
+- Frontend: `dist/public/` (served by Express)
+- Backend: `dist/index.js` (Node.js server)
