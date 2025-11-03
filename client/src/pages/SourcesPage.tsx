@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { SourceCard } from '@/components/SourceCard';
 import { Button } from '@/components/ui/button';
 import { Plus, ArrowLeft } from 'lucide-react';
@@ -10,6 +10,7 @@ import type { Source, SourceState } from '@shared/schema';
 
 export default function SourcesPage() {
   const { toast } = useToast();
+  const previousStatesRef = useRef<Map<number, { isRunning: number; statusMessage: string | null }>>(new Map());
 
   const { data: sources, isLoading: sourcesLoading } = useQuery<Source[]>({
     queryKey: ['/api/sources'],
@@ -24,23 +25,48 @@ export default function SourcesPage() {
     },
   });
   
-  // Show toast when status changes
+  // Show toast only when status transitions occur
   useEffect(() => {
-    if (!states) return;
+    if (!states || !sources) return;
     
     states.forEach((state) => {
-      if (state.status_message && state.is_running === 1) {
-        const source = sources?.find(s => s.id === state.source_id);
-        if (source) {
+      const source = sources.find(s => s.id === state.source_id);
+      if (!source) return;
+      
+      const previous = previousStatesRef.current.get(state.source_id);
+      const current = {
+        isRunning: state.is_running || 0,
+        statusMessage: state.status_message || null,
+      };
+      
+      // Detect state transitions
+      if (previous) {
+        // Transition from not running to running
+        if (previous.isRunning === 0 && current.isRunning === 1 && current.statusMessage) {
           toast({
             title: source.name,
-            description: state.status_message,
+            description: current.statusMessage,
             duration: 3000,
           });
         }
+        // Transition from running to complete
+        else if (previous.isRunning === 1 && current.isRunning === 0 && current.statusMessage) {
+          const isSuccess = current.statusMessage.startsWith('✓');
+          const isError = current.statusMessage.startsWith('✗');
+          
+          toast({
+            title: source.name,
+            description: current.statusMessage,
+            duration: 5000,
+            variant: isError ? 'destructive' : 'default',
+          });
+        }
       }
+      
+      // Update reference for next iteration
+      previousStatesRef.current.set(state.source_id, current);
     });
-  }, [states?.map(s => s.status_message).join(',')]); // Only trigger when messages change
+  }, [states, sources, toast]);
 
   const toggleEnabledMutation = useMutation({
     mutationFn: async ({ sourceId, enabled }: { sourceId: number; enabled: boolean }) => {
