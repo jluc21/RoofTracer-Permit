@@ -279,6 +279,14 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
 
   const startTime = Date.now();
 
+  // Mark ingestion as running
+  await storage.upsertSourceState({
+    source_id: sourceId,
+    is_running: 1,
+    status_message: mode === 'backfill' ? 'Starting backfill...' : 'Starting incremental sync...',
+    current_page: 0,
+  });
+
   try {
     const iterator =
       mode === "backfill"
@@ -287,6 +295,15 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
 
     for await (const normalized of iterator) {
       rowsFetched++;
+      
+      // Update progress every 10 permits
+      if (rowsFetched % 10 === 0) {
+        await storage.upsertSourceState({
+          source_id: sourceId,
+          is_running: 1,
+          status_message: `Processing permits... (${rowsFetched} fetched, ${rowsUpserted} saved)`,
+        });
+      }
 
       try {
         const permitData: InsertPermit = {
@@ -326,7 +343,7 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
       }
     }
 
-    // Update source state
+    // Update source state - mark as complete
     const endTime = Date.now();
     const freshnessSeconds = Math.floor((endTime - startTime) / 1000);
 
@@ -342,6 +359,9 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
       rows_upserted: rowsUpserted,
       errors: errors,
       freshness_seconds: freshnessSeconds,
+      is_running: 0,
+      status_message: `✓ Complete: ${rowsUpserted} permits ingested, ${errors} errors`,
+      current_page: 0,
     });
 
     console.log(
@@ -349,6 +369,14 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
     );
   } catch (error) {
     console.error(`Ingestion failed for source ${sourceId}:`, error);
+    
+    // Mark as failed
+    await storage.upsertSourceState({
+      source_id: sourceId,
+      is_running: 0,
+      status_message: `✗ Failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    });
+    
     throw error;
   }
 }

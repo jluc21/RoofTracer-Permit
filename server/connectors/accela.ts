@@ -148,6 +148,8 @@ export class AccelaConnector implements Connector {
     config: AccelaConfig,
     maxRows: number
   ): AsyncIterableIterator<NormalizedPermit> {
+    const { storage } = await import('../storage');
+    
     console.log(`[Accela] Starting LIVE backfill for ${sourceName}`);
     console.log(`[Accela] Portal: ${config.base_url}`);
     console.log(`[Accela] Module: ${config.module || 'Building'}`);
@@ -157,6 +159,12 @@ export class AccelaConnector implements Connector {
     try {
       // Launch Playwright browser
       console.log('[Accela] Launching browser...');
+      await storage.upsertSourceState({
+        source_id: sourceId,
+        is_running: 1,
+        status_message: 'Launching browser...',
+      });
+      
       browser = await chromium.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -168,10 +176,16 @@ export class AccelaConnector implements Connector {
       // Navigate to the Accela portal
       const searchUrl = `${config.base_url}/Cap/CapHome.aspx?module=${config.module || 'Building'}`;
       console.log(`[Accela] Navigating to: ${searchUrl}`);
+      await storage.upsertSourceState({
+        source_id: sourceId,
+        is_running: 1,
+        status_message: 'Navigating to Accela portal...',
+      });
+      
       await page.goto(searchUrl, { waitUntil: 'networkidle', timeout: 30000 });
       
       // Try to find and perform search
-      const results = await this.performSearch(page, config);
+      const results = await this.performSearch(page, config, sourceId);
       console.log(`[Accela] Found ${results.length} permit results from live portal`);
       
       // Yield normalized permits
@@ -205,8 +219,10 @@ export class AccelaConnector implements Connector {
 
   private async performSearch(
     page: Page,
-    config: AccelaConfig
+    config: AccelaConfig,
+    sourceId: number
   ): Promise<AccelaSearchResult[]> {
+    const { storage } = await import('../storage');
     const allResults: AccelaSearchResult[] = [];
     const keywords = config.search_keywords || ['roof', 'reroof', 're-roof'];
     const MAX_PAGES = 100; // Safety limit to prevent infinite loops
@@ -215,6 +231,13 @@ export class AccelaConnector implements Connector {
     try {
       // Wait for page to be ready
       await page.waitForLoadState('networkidle');
+      
+      // Update status: Searching
+      await storage.upsertSourceState({
+        source_id: sourceId,
+        is_running: 1,
+        status_message: `Searching for "${keywords[0]}"...`,
+      });
       
       // Look for search input fields - Accela portals vary by agency
       // Common patterns: record type search, keyword search, or advanced search
@@ -244,6 +267,14 @@ export class AccelaConnector implements Connector {
       
       while (hasMore && currentPage <= MAX_PAGES) {
         console.log(`[Accela] Scraping page ${currentPage}...`);
+        
+        // Update status with current page
+        await storage.upsertSourceState({
+          source_id: sourceId,
+          is_running: 1,
+          status_message: `Scraping page ${currentPage}... (${allResults.length} permits found so far)`,
+          current_page: currentPage,
+        });
         
         // Parse current page results
         const pageResults = await this.parseResultsTable(page, config, MAX_PERMITS_PER_PAGE);

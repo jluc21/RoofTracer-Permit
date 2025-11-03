@@ -61,6 +61,12 @@ export const sourceState = pgTable("source_state", {
   rows_upserted: integer("rows_upserted").default(0),
   errors: integer("errors").default(0),
   freshness_seconds: integer("freshness_seconds"),
+  
+  // Progress tracking for live ingestion
+  is_running: integer("is_running").default(0), // 1 = currently ingesting, 0 = idle
+  status_message: text("status_message"), // "Launching browser...", "Scraping page 5...", etc.
+  current_page: integer("current_page").default(0), // Current page being scraped
+  
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 
