@@ -10,6 +10,7 @@ cmds = [
 ]
 
 [phases.build]
+# npm ci does clean install automatically (no need for rm -rf node_modules)
 cmds = [
   "npm run build"
 ]
