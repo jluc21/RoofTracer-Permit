@@ -1,0 +1,88 @@
+> node dist/index.js
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> node dist/index.js
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+file:///app/dist/index.js:1702
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> node dist/index.js
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> node dist/index.js
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> node dist/index.js
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> node dist/index.js
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> node dist/index.js
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> node dist/index.js
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
+npm warn config production Use `--omit=dev` instead.
+> rest-express@1.0.0 start
+> node dist/index.js
+file:///app/dist/index.js:1702
+    throw new Error(
+          ^
+Error: Could not find the build directory: /app/dist/public, make sure to build the client first
+    at serveStatic (file:///app/dist/index.js:1702:11)
+    at file:///app/dist/index.js:1757:5
+Node.js v22.21.1
