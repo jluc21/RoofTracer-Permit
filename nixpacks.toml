@@ -1,0 +1,21 @@
+# Railway Nixpacks configuration - NUCLEAR CLEAN BUILD
+# This file is read by Railway's Nixpacks builder and CANNOT be ignored
+
+[phases.setup]
+nixPkgs = ["nodejs_20", "npm-9_x"]
+
+[phases.install]
+# NUCLEAR: Delete ALL cached modules before install
+cmds = [
+  "rm -rf node_modules",
+  "rm -f package-lock.json",
+  "npm install"
+]
+
+[phases.build]
+cmds = [
+  "npm run build"
+]
+
+[start]
+cmd = "NODE_ENV=production node dist/index.js"
