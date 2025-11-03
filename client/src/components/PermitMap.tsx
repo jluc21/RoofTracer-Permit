@@ -30,31 +30,46 @@ export function PermitMap({
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    map.current = new maplibregl.Map({
-      container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
+    try {
+      map.current = new maplibregl.Map({
+        container: mapContainer.current,
+        style: {
+          version: 8,
+          sources: {
+            osm: {
+              type: 'raster',
+              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution: '© OpenStreetMap contributors',
+            },
           },
+          layers: [
+            {
+              id: 'osm',
+              type: 'raster',
+              source: 'osm',
+              minzoom: 0,
+              maxzoom: 19,
+            },
+          ],
         },
-        layers: [
-          {
-            id: 'osm',
-            type: 'raster',
-            source: 'osm',
-            minzoom: 0,
-            maxzoom: 19,
-          },
-        ],
-      },
-      center: [-98.5795, 39.8283], // Center of US
-      zoom: 4,
-    });
+        center: [-98.5795, 39.8283], // Center of US
+        zoom: 4,
+        failIfMajorPerformanceCaveat: false, // Allow software rendering
+        preserveDrawingBuffer: true, // Help with headless environments
+      });
+    } catch (error) {
+      console.error('[PermitMap] Failed to initialize map - WebGL might not be available:', error);
+      // Trigger bounds change even if map fails, so permits can still be fetched
+      const defaultBounds = {
+        west: -125,
+        south: 24,
+        east: -66,
+        north: 50,
+      };
+      setTimeout(() => onBoundsChange(defaultBounds), 100);
+      return;
+    }
 
     map.current.addControl(
       new maplibregl.NavigationControl({

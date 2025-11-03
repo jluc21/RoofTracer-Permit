@@ -54,6 +54,42 @@ app.use((req, res, next) => {
   await initializeDatabase();
   
   const server = await registerRoutes(app);
+  
+  // Auto-backfill enabled sources on startup (background task)
+  setImmediate(async () => {
+    try {
+      const { storage } = await import("./storage");
+      const sources = await storage.getSources();
+      const enabledSources = sources.filter(s => s.enabled);
+      
+      if (enabledSources.length > 0) {
+        console.log(`[auto-backfill] Starting automatic backfill for ${enabledSources.length} enabled sources...`);
+        
+        for (const source of enabledSources) {
+          // Check if this source has already been ingested
+          const state = await storage.getSourceState(source.id);
+          const hasData = state && state.rows_upserted && state.rows_upserted > 0;
+          
+          if (!hasData) {
+            console.log(`[auto-backfill] Triggering backfill for: ${source.name}`);
+            // Trigger backfill via internal API call
+            const { runIngestion } = await import("./routes");
+            setImmediate(async () => {
+              try {
+                await runIngestion(source.id, "backfill");
+              } catch (error) {
+                console.error(`[auto-backfill] Failed for ${source.name}:`, error);
+              }
+            });
+          } else {
+            console.log(`[auto-backfill] Skipping ${source.name} - already has ${state.rows_upserted} permits`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[auto-backfill] Error during automatic backfill:", error);
+    }
+  });
 
   // Health check endpoint
   app.get("/health", (_req, res) => res.status(200).json({ ok: true }));

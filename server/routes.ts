@@ -222,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 }
 
 // Ingestion runner
-async function runIngestion(sourceId: number, mode: "backfill" | "incremental") {
+export async function runIngestion(sourceId: number, mode: "backfill" | "incremental") {
   const source = await storage.getSource(sourceId);
   if (!source) {
     throw new Error(`Source ${sourceId} not found`);

@@ -68,8 +68,9 @@ export default function MapView() {
   }, [bounds, filters, currentPage]);
 
   // Fetch permits
+  const queryString = buildQueryParams();
   const { data: permitsData, isLoading } = useQuery<{ permits: Permit[]; total: number }>({
-    queryKey: ['/api/permits', buildQueryParams()],
+    queryKey: [`/api/permits${queryString ? '?' + queryString : ''}`],
     enabled: bounds !== null,
   });
 
