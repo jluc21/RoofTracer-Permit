@@ -38,11 +38,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ version: APP_VERSION });
   });
 
-  // Status endpoint - per-source freshness
+  // Status endpoint - per-source freshness and database stats
   app.get("/api/status", async (_req, res) => {
     try {
       const sources = await storage.getSources();
       const states = await storage.getAllSourceStates();
+      
+      // Get total permit count
+      const permitStats = await storage.getPermitStats();
 
       const sourceStatuses = sources.map((source) => {
         const state = states.find((s) => s.source_id === source.id);
@@ -60,7 +63,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json(sourceStatuses);
+      res.json({
+        database: {
+          total_permits: permitStats.total,
+          permits_with_coords: permitStats.with_coords,
+          roofing_permits: permitStats.roofing,
+        },
+        sources: sourceStatuses,
+      });
     } catch (error) {
       res.status(500).json({
         error: error instanceof Error ? error.message : "Unknown error",

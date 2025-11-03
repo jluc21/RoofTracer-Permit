@@ -42,6 +42,7 @@ export interface IStorage {
   getPermit(id: string): Promise<Permit | undefined>;
   upsertPermit(permit: InsertPermit): Promise<Permit>;
   getPermitByFingerprint(fingerprint: string): Promise<Permit | undefined>;
+  getPermitStats(): Promise<{ total: number; with_coords: number; roofing: number }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -237,6 +238,22 @@ export class DatabaseStorage implements IStorage {
       .from(permits)
       .where(eq(permits.fingerprint, fingerprint));
     return permit || undefined;
+  }
+
+  async getPermitStats(): Promise<{ total: number; with_coords: number; roofing: number }> {
+    const [result] = await db
+      .select({
+        total: sql<number>`count(*)::int`,
+        with_coords: sql<number>`count(*) FILTER (WHERE ${permits.lat} IS NOT NULL AND ${permits.lon} IS NOT NULL)::int`,
+        roofing: sql<number>`count(*) FILTER (WHERE ${permits.is_roofing} = 1)::int`,
+      })
+      .from(permits);
+
+    return {
+      total: result?.total || 0,
+      with_coords: result?.with_coords || 0,
+      roofing: result?.roofing || 0,
+    };
   }
 }
 
