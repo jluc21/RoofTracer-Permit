@@ -1,0 +1,66 @@
+Starting Container
+[db-init] Starting database initialization...
+[Geocoding] Cache table initialized
+[db-init] Schema created successfully
+[db-init] Found 4 existing sources. Skipping seed.
+[db-init] Database initialization complete!
+6:35:32 PM [express] [express] serving on port 8080
+[auto-backfill] Starting automatic backfill for 2 enabled sources...
+[auto-backfill] Triggering backfill for: San Francisco, CA - Building Permits
+[auto-backfill] Triggering backfill for: Austin, TX - Building Permits
+    at classifyAsRoofing (file:///app/dist/index.js:588:17)
+    at SocrataConnector.normalize (file:///app/dist/index.js:805:27)
+    at SocrataConnector.backfill (file:///app/dist/index.js:696:24)
+    at classifyAsRoofing (file:///app/dist/index.js:588:17)
+Ingestion failed for source 3: Error: ENOENT: no such file or directory, open '/app/dist/roofing_rules.yaml'
+    at SocrataConnector.normalize (file:///app/dist/index.js:805:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at Object.readFileSync (node:fs:448:20)
+    at SocrataConnector.backfill (file:///app/dist/index.js:696:24)
+    at loadRoofingRules (file:///app/dist/index.js:583:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async runIngestion (file:///app/dist/index.js:1581:22)
+    at async Immediate.<anonymous> (file:///app/dist/index.js:2034:17) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/app/dist/roofing_rules.yaml'
+}
+[auto-backfill] Failed for Austin, TX - Building Permits: Error: ENOENT: no such file or directory, open '/app/dist/roofing_rules.yaml'
+    at Object.readFileSync (node:fs:448:20)
+    at loadRoofingRules (file:///app/dist/index.js:583:27)
+    at async runIngestion (file:///app/dist/index.js:1581:22)
+    at async Immediate.<anonymous> (file:///app/dist/index.js:2034:17) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/app/dist/roofing_rules.yaml'
+}
+  syscall: 'open',
+  path: '/app/dist/roofing_rules.yaml'
+Ingestion failed for source 4: Error: ENOENT: no such file or directory, open '/app/dist/roofing_rules.yaml'
+    at classifyAsRoofing (file:///app/dist/index.js:588:17)
+    at SocrataConnector.backfill (file:///app/dist/index.js:696:24)
+}
+    at SocrataConnector.backfill (file:///app/dist/index.js:696:24)
+    at Object.readFileSync (node:fs:448:20)
+[auto-backfill] Failed for San Francisco, CA - Building Permits: Error: ENOENT: no such file or directory, open '/app/dist/roofing_rules.yaml'
+    at SocrataConnector.normalize (file:///app/dist/index.js:805:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at loadRoofingRules (file:///app/dist/index.js:583:27)
+    at Object.readFileSync (node:fs:448:20)
+    at async runIngestion (file:///app/dist/index.js:1581:22)
+    at classifyAsRoofing (file:///app/dist/index.js:588:17)
+    at async Immediate.<anonymous> (file:///app/dist/index.js:2034:17) {
+    at loadRoofingRules (file:///app/dist/index.js:583:27)
+    at SocrataConnector.normalize (file:///app/dist/index.js:805:27)
+  errno: -2,
+  code: 'ENOENT',
+    at async runIngestion (file:///app/dist/index.js:1581:22)
+    at async Immediate.<anonymous> (file:///app/dist/index.js:2034:17) {
+  errno: -2,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: '/app/dist/roofing_rules.yaml'
+}
