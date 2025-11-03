@@ -1,0 +1,101 @@
+[Region: asia-southeast1]
+==============
+Using Nixpacks
+==============
+
+context: 4tsv-QKtG
+╔══════════════════════════════ Nixpacks v1.38.0 ══════════════════════════════╗
+║ setup      │ nodejs_20, npm-9_x                                              ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ caddy      │ pkgs: caddy                                                     ║
+║            │ cmds: caddy fmt --overwrite /assets/Caddyfile                   ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ install    │ npm install                                                     ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ build      │ rm -rf node_modules && npm ci && npm run build && npm prune     ║
+║            │ --production                                                    ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ start      │ NODE_ENV=production node dist/index.js                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+internal
+load build definition from Dockerfile
+0ms
+
+internal
+load metadata for ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+543ms
+
+internal
+load .dockerignore
+0ms
+
+stage-0
+FROM ghcr.io/railwayapp/nixpacks:ubuntu-1745885067@sha256:d45c89d80e13d7ad0fd555b5130f22a866d9dd10e861f589932303ef2314c7de
+8ms
+
+internal
+load build context
+0ms
+
+stage-0
+WORKDIR /app/ cached
+0ms
+
+stage-0
+COPY .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix
+272ms
+
+stage-0
+RUN nix-env -if .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix && nix-collect-garbage -d
+31s
+36 store paths deleted, 243.63 MiB freed
+
+stage-0
+COPY .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix
+43ms
+
+stage-0
+RUN nix-env -if .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix && nix-collect-garbage -d
+38s
+61 store paths deleted, 559.57 MiB freed
+
+stage-0
+COPY .nixpacks/assets /assets/
+66ms
+
+stage-0
+COPY . /app/.
+22ms
+
+stage-0
+RUN  caddy fmt --overwrite /assets/Caddyfile
+162ms
+
+stage-0
+COPY . /app/.
+26ms
+
+stage-0
+RUN npm install
+8s
+Run `npm audit` for details.
+
+stage-0
+COPY . /app/.
+176ms
+
+stage-0
+RUN rm -rf node_modules && npm ci && npm run build && npm prune --production
+744ms
+rm: cannot remove 'node_modules/.cache': Device or resource busy
+Dockerfile:30
+-------------------
+28 |     # build phase
+29 |     COPY . /app/.
+30 | >>> RUN --mount=type=cache,id=s/de5bb8ef-b213-4bd5-886f-152d68663c31-node_modules/cache,target=/app/node_modules/.cache rm -rf node_modules && npm ci && npm run build && npm prune --production
+31 |
+32 |
+-------------------
+ERROR: failed to build: failed to solve: process "/bin/bash -ol pipefail -c rm -rf node_modules && npm ci && npm run build && npm prune --production" did not complete successfully: exit code: 1
+Error: Docker build failed
