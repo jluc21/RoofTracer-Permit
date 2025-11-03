@@ -10,9 +10,12 @@ cmds = [
 ]
 
 [phases.build]
-# npm ci does clean install automatically (no need for rm -rf node_modules)
+# Override Railway's default build (which has rm -rf node_modules that conflicts with cache mount)
+# npm ci already does a clean install, so no need to delete node_modules first
 cmds = [
-  "npm run build"
+  "npm ci",
+  "npm run build",
+  "npm prune --production"
 ]
 
 [start]
