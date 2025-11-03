@@ -1,0 +1,114 @@
+Starting Container
+/app/node_modules/rollup/dist/native.js:83
+		throw new Error(
+		      ^
+Error: Cannot find module @rollup/rollup-linux-x64-gnu. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:83:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:92:76)
+    ... 3 lines matching cause stack trace ...
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at cjsLoader (node:internal/modules/esm/translators:346:17)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:286:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-gnu'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+      at Module._load (node:internal/modules/cjs/loader:1051:27)
+      at Module.require (node:internal/modules/cjs/loader:1311:19)
+      at require (node:internal/modules/helpers:179:18)
+Node.js v20.18.1
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+      at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:92:76)
+  }
+}
+      at Module._compile (node:internal/modules/cjs/loader:1469:14)
+      at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+      at Module.load (node:internal/modules/cjs/loader:1288:32)
+      at Module._load (node:internal/modules/cjs/loader:1104:12) {
+      at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:65:10)
+/app/node_modules/rollup/dist/native.js:83
+		throw new Error(
+		      ^
+Error: Cannot find module @rollup/rollup-linux-x64-gnu. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:83:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:92:76)
+    ... 3 lines matching cause stack trace ...
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at cjsLoader (node:internal/modules/esm/translators:346:17)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:286:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-gnu'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+      at Module._load (node:internal/modules/cjs/loader:1051:27)
+      at Module.require (node:internal/modules/cjs/loader:1311:19)
+      at require (node:internal/modules/helpers:179:18)
+      at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:65:10)
+      at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:92:76)
+      at Module._compile (node:internal/modules/cjs/loader:1469:14)
+      at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+      at Module.load (node:internal/modules/cjs/loader:1288:32)
+      at Module._load (node:internal/modules/cjs/loader:1104:12) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+  }
+}
+Node.js v20.18.1
+/app/node_modules/rollup/dist/native.js:83
+		throw new Error(
+		      ^
+Error: Cannot find module @rollup/rollup-linux-x64-gnu. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:83:9)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:92:76)
+    ... 3 lines matching cause stack trace ...
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at cjsLoader (node:internal/modules/esm/translators:346:17)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:286:7)
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-gnu'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+      at Module._load (node:internal/modules/cjs/loader:1051:27)
+      at Module.require (node:internal/modules/cjs/loader:1311:19)
+      at require (node:internal/modules/helpers:179:18)
+      at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
+      at Module.load (node:internal/modules/cjs/loader:1288:32)
+      at Module._load (node:internal/modules/cjs/loader:1104:12) {
+    code: 'MODULE_NOT_FOUND',
+      at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:65:10)
+    requireStack: [ '/app/node_modules/rollup/dist/native.js' ]
+      at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:92:76)
+      at Module._compile (node:internal/modules/cjs/loader:1469:14)
+  }
+}
+Node.js v20.18.1
+/app/node_modules/rollup/dist/native.js:83
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:286:7)
+		throw new Error(
+		      ^
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24) {
+  [cause]: Error: Cannot find module '@rollup/rollup-linux-x64-gnu'
+  Require stack:
+  - /app/node_modules/rollup/dist/native.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1225:15)
+Error: Cannot find module @rollup/rollup-linux-x64-gnu. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+      at Module._load (node:internal/modules/cjs/loader:1051:27)
+      at Module.require (node:internal/modules/cjs/loader:1311:19)
+    at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:83:9)
+      at require (node:internal/modules/helpers:179:18)
+    at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:92:76)
+    ... 3 lines matching cause stack trace ...
+    at Module._load (node:internal/modules/cjs/loader:1104:12)
+    at cjsLoader (node:internal/modules/esm/translators:346:17)
+      at requireWithFriendlyError (/app/node_modules/rollup/dist/native.js:65:10)
+      at Object.<anonymous> (/app/node_modules/rollup/dist/native.js:92:76)
+      at Module._compile (node:internal/modules/cjs/loader:1469:14)
+      at Module._extensions..js (node:internal/modules/cjs/loader:1548:10)
