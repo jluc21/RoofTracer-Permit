@@ -53,6 +53,21 @@ app.use((req, res, next) => {
   // Initialize database schema and seed sources
   await initializeDatabase();
   
+  // Migration: Enable Sacramento/Lincoln sources for Playwright
+  const { storage } = await import("./storage");
+  const sacSources = await storage.getSources();
+  const toEnable = sacSources.filter(s => 
+    (s.name.includes('Sacramento County') || s.name.includes('Lincoln')) && s.enabled === 0
+  );
+  
+  if (toEnable.length > 0) {
+    console.log(`[migration] Enabling ${toEnable.length} Sacramento area sources...`);
+    for (const source of toEnable) {
+      await storage.updateSource(source.id, { enabled: 1 });
+      console.log(`[migration] ✓ Enabled: ${source.name}`);
+    }
+  }
+  
   const server = await registerRoutes(app);
   
   // Auto-backfill enabled sources on startup (background task)

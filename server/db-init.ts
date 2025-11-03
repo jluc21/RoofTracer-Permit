@@ -151,7 +151,7 @@ async function seedDataSources() {
         record_type: null,
         keywords: ["roof", "reroof", "re-roof"],
       },
-      enabled: 0, // Disabled - requires Playwright
+      enabled: 1, // Enabled - Playwright available on Railway
       schedule_cron: "0 2 * * *",
       max_rows_per_run: 100,
       max_runtime_minutes: 45,
@@ -168,7 +168,7 @@ async function seedDataSources() {
         record_type: null,
         keywords: ["roof", "reroof", "re-roof"],
       },
-      enabled: 0, // Disabled - requires Playwright
+      enabled: 1, // Enabled - Playwright available on Railway
       schedule_cron: "0 3 * * *",
       max_rows_per_run: 100,
       max_runtime_minutes: 45,
@@ -239,8 +239,8 @@ async function seedDataSources() {
       max_requests_per_minute: 10,
     });
 
-    console.log("[db-init] ✓ Seeded 6 data sources (2 Accela disabled, 4 Socrata enabled)");
-    console.log("[db-init] To ingest permits, visit /sources and click 'Backfill' on enabled sources");
+    console.log("[db-init] ✓ Seeded 6 data sources (all enabled for Sacramento area focus)");
+    console.log("[db-init] Auto-backfill will ingest permits from enabled sources on startup");
   } catch (error) {
     console.error("[db-init] Failed to seed data sources:", error);
     throw error;

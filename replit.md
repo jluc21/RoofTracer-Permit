@@ -124,14 +124,19 @@ ACCELA_USE_PLAYWRIGHT=true
    - Navigate to `/sources` → See all 6 data sources
    - Click "Backfill" on any source → Starts ingestion
 
-### Data Sources Available
+### Data Sources Available (Sacramento Focus)
 
-1. **Austin, TX** (Socrata) - Building permits
-2. **San Francisco, CA** (Socrata) - Building permits  
-3. **Boston, MA** (Socrata) - Building permits
-4. **Seattle, WA** (Socrata) - Building permits
-5. **Sacramento County** (Accela) - Roofing permits via Playwright
-6. **City of Lincoln** (Accela) - Roofing permits via Playwright
+**Primary Sources (Enabled):**
+1. **Sacramento County, CA** (Accela) - Building permits via Playwright
+2. **City of Lincoln, CA** (Accela) - Building permits via Playwright
+3. **Austin, TX** (Socrata) - Building permits
+4. **San Francisco, CA** (Socrata) - Building permits
+
+**Additional Sources (Enabled):**
+5. **Boston, MA** (Socrata) - Building permits
+6. **Seattle, WA** (Socrata) - Building permits
+
+All sources are enabled and will auto-backfill on deployment. Sacramento/Lincoln sources are automatically enabled via startup migration.
 
 ## Troubleshooting Railway Deployments
 
