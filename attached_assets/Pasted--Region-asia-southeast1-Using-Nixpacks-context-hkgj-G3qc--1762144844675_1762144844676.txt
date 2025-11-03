@@ -1,0 +1,110 @@
+[Region: asia-southeast1]
+==============
+Using Nixpacks
+==============
+
+context: hkgj-G3qc
+╔══════════════════════════════ Nixpacks v1.38.0 ══════════════════════════════╗
+║ setup      │ nodejs_20, npm-9_x                                              ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ caddy      │ pkgs: caddy                                                     ║
+║            │ cmds: caddy fmt --overwrite /assets/Caddyfile                   ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ install    │ npm install                                                     ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ build      │ rm -rf node_modules && npm ci && npm run build && npm prune     ║
+║            │ --production                                                    ║
+║──────────────────────────────────────────────────────────────────────────────║
+║ start      │ NODE_ENV=production node dist/index.js                          ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+internal
+load build definition from Dockerfile
+0ms
+
+internal
+load metadata for ghcr.io/railwayapp/nixpacks:ubuntu-1745885067
+577ms
+
+internal
+load .dockerignore
+1ms
+
+internal
+load build context
+0ms
+
+stage-0
+COPY .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix cached
+0ms
+
+stage-0
+RUN nix-env -if .nixpacks/nixpkgs-ba913eda2df8eb72147259189d55932012df6301.nix && nix-collect-garbage -d cached
+0ms
+
+stage-0
+COPY .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix
+562ms
+
+stage-0
+RUN nix-env -if .nixpacks/nixpkgs-ffeebf0acf3ae8b29f8c7049cd911b9636efd7e7.nix && nix-collect-garbage -d
+43s
+61 store paths deleted, 559.57 MiB freed
+
+stage-0
+COPY .nixpacks/assets /assets/
+78ms
+
+stage-0
+COPY . /app/.
+26ms
+
+stage-0
+RUN  caddy fmt --overwrite /assets/Caddyfile
+229ms
+
+stage-0
+COPY . /app/.
+32ms
+
+stage-0
+RUN npm install
+8s
+npm warn config production Use `--omit=dev` instead.
+npm warn config optional Use `--omit=optional` to exclude optional dependencies, or
+npm warn config `--include=optional` to include them.
+npm warn config
+npm warn config       Default value does install optional deps unless otherwise omitted.
+npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+
+added 516 packages, and audited 517 packages in 8s
+
+82 packages are looking for funding
+  run `npm fund` for details
+
+5 moderate severity vulnerabilities
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+stage-0
+COPY . /app/.
+132ms
+
+stage-0
+RUN rm -rf node_modules && npm ci && npm run build && npm prune --production
+777ms
+rm: cannot remove 'node_modules/.cache': Device or resource busy
+Dockerfile:30
+-------------------
+28 |     # build phase
+29 |     COPY . /app/.
+30 | >>> RUN --mount=type=cache,id=s/de5bb8ef-b213-4bd5-886f-152d68663c31-node_modules/cache,target=/app/node_modules/.cache rm -rf node_modules && npm ci && npm run build && npm prune --production
+31 |
+32 |
+-------------------
+ERROR: failed to build: failed to solve: process "/bin/bash -ol pipefail -c rm -rf node_modules && npm ci && npm run build && npm prune --production" did not complete successfully: exit code: 1
+Error: Docker build failed
