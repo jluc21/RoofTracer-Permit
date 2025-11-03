@@ -1,0 +1,183 @@
+My app is crashing and Railway deploy shows wss://postgres.railway.internal from Neon. Please refactor to standard pg and make the server resilient to port conflicts.
+
+Do these tasks exactly:
+
+Remove Neon everywhere (source only).
+
+Replace any imports from @neondatabase/serverless → pg
+
+Replace any imports from drizzle-orm/neon-serverless → drizzle-orm/node-postgres
+
+Remove all neonConfig and any WebSocket usage for Postgres (e.g., wss://postgres.railway.internal)
+
+Make sure these files use pg:
+
+server/db.ts:
+
+import { Pool } from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
+
+const needSSL =
+  /\brailway\.app\b|amazonaws\.com\b|neon\.tech\b/i.test(process.env.DATABASE_URL || "");
+
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: needSSL ? { rejectUnauthorized: false } : false,
+});
+
+export const db = drizzle(pool);
+export default db;
+
+
+server/services/geocoding.ts must import Pool from "pg" (not Neon) and receive/use the same pg pool instance.
+
+Fix the port-in-use crash and add graceful shutdown.
+
+In the main server entry (e.g., server/index.ts), replace the listen block with:
+
+const PORT = Number(process.env.PORT) || 5000;
+
+function start(port: number) {
+  const server = app.listen(port, "0.0.0.0", () => {
+    console.log(`[express] serving on port ${port}`);
+  });
+
+  server.on("error", (err: any) => {
+    if (err?.code === "EADDRINUSE") {
+      const fallback = Math.floor(Math.random() * (5999 - 5100) + 5100);
+      console.warn(`[express] Port ${port} in use. Retrying on ${fallback}...`);
+      start(fallback);
+    } else {
+      throw err;
+    }
+  });
+
+  // graceful shutdown
+  const shutdown = async () => {
+    console.log("[express] shutting down…");
+    try { await pool.end(); } catch {}
+    server.close(() => process.exit(0));
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+start(PORT);
+
+
+Add a minimal healthcheck route:
+
+app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
+
+
+Clean up package.json and scripts.
+
+Remove @neondatabase/serverless from dependencies/devDependencies.
+
+Ensure pg is present (latest).
+
+Keep drizzle-orm, but not the neon adapters.
+
+Add scripts:
+
+"scripts": {
+  "dev": "NODE_ENV=development tsx server/index.ts",
+  "build": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js",
+  "start": "node dist/index.js",
+  "fix:ports": "pkill -9 -f node || true && pkill -9 -f vite || true && pkill -9 -f tsx || true && npx kill-port 5000 5050 5173 3000 || true"
+}
+
+
+Make sure dist/ is not tracked so Railway can’t reuse stale Neon bundles.
+
+Add dist/ to .gitignore, untrack if necessary.
+
+Run a clean install and build, then start.
+
+Execute in the shell:
+
+rm -rf node_modules dist .cache .bun package-lock.json
+npm install
+npm run build
+npm start
+
+
+The app should start without EADDRINUSE and without any Neon/WebSocket errors.
+
+Leave a brief summary of changes and confirm that:
+
+/health returns { ok: true }
+
+The console shows [express] serving on port ...
+
+No logs mention wss://postgres.railway.internal or @neondatabase/serverless.
+
+What we’re fixing & why (for context)
+
+On Railway we saw:
+
+wss://postgres.railway.internal errors → this comes from Neon’s WebSocket driver, which is wrong for Railway Postgres in our setup. We’re replacing all Neon usage with pg (native driver) + drizzle-orm/node-postgres.
+
+Railway also sometimes reused a stale dist/ built with Neon. That’s why we’re ignoring/untracking dist/ and doing a clean build on deploy.
+
+On Replit we hit:
+
+EADDRINUSE (address already in use) on port 5000/5050 due to zombie processes. We’re adding:
+
+A fallback port when 5000 is busy,
+
+A graceful shutdown to prevent zombies,
+
+A fix:ports script to manually clear them during dev.
+
+PostCSS/Browserslist warning is non-blocking and can be ignored for now.
+
+After Agent finishes (you do this)
+
+In Replit shell:
+
+npm run fix:ports
+npm run build
+npm start
+
+
+Confirm the logs:
+
+[express] serving on port 5000 (or fallback 51xx)
+[Geocoding] Cache table initialized
+
+
+Open /health — you should see {"ok":true}.
+
+Commit & push:
+
+git add -A
+git commit -m "Switch Neon→pg, add port fallback, graceful shutdown, healthcheck, clean build"
+git push
+
+
+Railway redeploy (important!)
+
+In your Railway service:
+
+Clear build cache
+
+Redeploy
+
+Ensure env vars:
+
+DATABASE_URL → your Railway Postgres connection string
+
+If using Public URL, include ?sslmode=require.
+
+If using Internal, Railway handles SSL; our pg config tolerates both.
+
+Start command: npm start.
+
+Expected Railway logs:
+
+[express] serving on port <assigned>
+[Geocoding] Cache table initialized
+
+
+…and no Neon/WebSocket messages.

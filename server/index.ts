@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { pool } from "./db";
 
 const app = express();
 
@@ -9,6 +10,7 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
@@ -49,6 +51,9 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
+  // Health check endpoint
+  app.get("/health", (_req, res) => res.status(200).json({ ok: true }));
+
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
@@ -66,16 +71,40 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  const PORT = Number(process.env.PORT) || 5000;
+
+  function start(port: number) {
+    const httpServer = server.listen(port, "0.0.0.0", () => {
+      log(`[express] serving on port ${port}`);
+    });
+
+    httpServer.on("error", (err: any) => {
+      if (err?.code === "EADDRINUSE") {
+        const fallback = Math.floor(Math.random() * (5999 - 5100) + 5100);
+        console.warn(`[express] Port ${port} in use. Retrying on ${fallback}...`);
+        start(fallback);
+      } else {
+        throw err;
+      }
+    });
+
+    const shutdown = async () => {
+      console.log("[express] shutting down…");
+      try { 
+        await pool.end(); 
+        console.log("[express] database pool closed");
+      } catch (e) {
+        console.error("[express] error closing pool:", e);
+      }
+      httpServer.close(() => {
+        console.log("[express] server closed");
+        process.exit(0);
+      });
+    };
+
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
+  }
+
+  start(PORT);
 })();

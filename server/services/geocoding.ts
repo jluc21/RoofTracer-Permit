@@ -1,4 +1,4 @@
-import { Pool } from '@neondatabase/serverless';
+import { Pool } from 'pg';
 
 interface GeocodeResult {
   lat: number | null;
