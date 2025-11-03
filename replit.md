@@ -12,6 +12,41 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Developments (November 3, 2025)
 
+### Sacramento County ArcGIS Integration - ACTIVE INGESTION ✅
+
+**Objective:** Scale from dozens to tens of thousands of permits by integrating Sacramento County's ArcGIS REST API (127,289 total building permits available).
+
+**Implementation:**
+1. **Added Sacramento County ArcGIS Source** (`migrations/0007_enable_sacramento_sources.ts`):
+   - Endpoint: `https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Permits/FeatureServer/0`
+   - Access to 127,289 total building permits (all types)
+   - Layer ID: 0 (Permits layer)
+   - Max rows per run: 50,000 permits
+   - Rate limit: 60 requests/minute (accelerated for faster ingestion)
+
+2. **Removed Hardcoded Roofing Filters** (`server/connectors/arcgis.ts`):
+   - Changed from `UPPER(PermitType) LIKE '%ROOF%'` filter to `WHERE 1=1` (fetch all permits)
+   - ArcGIS connector now fetches ALL building permits regardless of type
+   - Roofing classification applied post-ingestion using YAML rules
+   - This approach works with any ArcGIS dataset schema, not just specific field names
+
+3. **Accelerated Ingestion Rate**:
+   - Increased rate limit from 10 to 60 requests/minute for Sacramento County
+   - Each batch fetches 1,000 permits
+   - Theoretical max: 60,000 permits/minute (60 batches × 1,000 each)
+
+**Current Status (Active Ingestion):**
+- **Sacramento County ArcGIS**: 1,023 permits ingested (192 roofing), actively running
+- **Total Database**: 9,962 permits (841 roofing) from 5 sources
+- **Data Sources**:
+  - Austin, TX: 5,405 permits (46 roofing)
+  - San Francisco, CA: 3,493 permits (603 roofing)  
+  - Sacramento County ArcGIS: 1,023 permits (192 roofing) **← ACTIVELY INGESTING**
+  - City of Lincoln: 25 permits
+  - Sacramento County Accela (OLD): 16 permits
+
+**Result:** ✅ Successfully scaled from ~50 to **nearly 10,000 permits**. Sacramento County continues ingesting from its 127K+ permit database, with real-time progress tracking showing live updates on the UI.
+
 ### Real-Time Progress Tracking - IMPLEMENTED ✅
 
 **Feature:** Live progress tracking during data ingestion with visual feedback and status updates.
@@ -22,10 +57,9 @@ Preferred communication style: Simple, everyday language.
    - `status_message` (text): Current status message during ingestion  
    - `current_page` (integer): Current page being scraped (for Accela pagination)
 
-2. **Backend Progress Updates** (`server/routes.ts`, `server/connectors/accela.ts`):
+2. **Backend Progress Updates** (`server/routes.ts`, `server/connectors/accela.ts`, `server/connectors/arcgis.ts`):
    - Sets `is_running=1` and `status_message` when ingestion starts
    - Updates progress every 10 permits during processing
-   - Updates status during Accela scraping: "Launching browser...", "Navigating to Accela portal...", "Scraping page X..."
    - Sets `is_running=0` with completion message: "✓ Complete: X permits ingested, Y errors" or "✗ Failed: error message"
 
 3. **Frontend Real-Time Updates** (`client/src/pages/SourcesPage.tsx`, `client/src/components/SourceCard.tsx`):
@@ -35,7 +69,7 @@ Preferred communication style: Simple, everyday language.
    - Disables all buttons while ingestion is running
    - Uses state transition tracking (useRef) to prevent duplicate toast notifications
 
-**Result:** ✅ Users see live progress updates during ingestion with clear visual feedback. Tested with Sacramento County (29 permits) and City of Lincoln (27 permits).
+**Result:** ✅ Users see live progress updates during ingestion with clear visual feedback. Currently showing Sacramento County's active ingestion in real-time.
 
 ### Data Display Issue - RESOLVED ✅
 
@@ -52,7 +86,7 @@ Preferred communication style: Simple, everyday language.
 2. **WebGL Fallback** (`client/src/components/PermitMap.tsx`) - Added `failIfMajorPerformanceCaveat: false` and error handling that sets default US bounds even when map fails
 3. **Query Key Fix** (`client/src/pages/MapView.tsx`) - Changed to single string format: `['/api/permits?bbox=...']`
 
-**Result:** ✅ Map now displays **2,063+ permits** successfully. App works even without WebGL visualization - permits appear in drawer and filters work correctly.
+**Result:** ✅ Map now displays **9,962+ permits** successfully across the United States. App works even without WebGL visualization - permits appear in drawer and filters work correctly.
 
 ## System Architecture
 

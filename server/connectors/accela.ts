@@ -153,7 +153,8 @@ export class AccelaConnector implements Connector {
     console.log(`[Accela] Starting LIVE backfill for ${sourceName}`);
     console.log(`[Accela] Portal: ${config.base_url}`);
     console.log(`[Accela] Module: ${config.module || 'Building'}`);
-    console.log(`[Accela] Search keywords: ${JSON.stringify(config.search_keywords || ['roof', 'reroof', 're-roof'])}`);
+    console.log(`[Accela] Strategy: Scrape ALL building permits, then classify roofing using rules`);
+    console.log(`[Accela] Max permits: ${maxRows.toLocaleString()}`);
     
     let browser: Browser | null = null;
     try {
@@ -224,7 +225,6 @@ export class AccelaConnector implements Connector {
   ): Promise<AccelaSearchResult[]> {
     const { storage } = await import('../storage');
     const allResults: AccelaSearchResult[] = [];
-    const keywords = config.search_keywords || ['roof', 'reroof', 're-roof'];
     const MAX_PAGES = 100; // Safety limit to prevent infinite loops
     const MAX_PERMITS_PER_PAGE = 1000; // Increased from 50
     
@@ -236,28 +236,39 @@ export class AccelaConnector implements Connector {
       await storage.upsertSourceState({
         source_id: sourceId,
         is_running: 1,
-        status_message: `Searching for "${keywords[0]}"...`,
+        status_message: `Searching for all building permits...`,
       });
       
-      // Look for search input fields - Accela portals vary by agency
-      // Common patterns: record type search, keyword search, or advanced search
+      console.log('[Accela] Searching for ALL building permits (no keyword filter)');
       
-      // Try to find keyword/description search field
-      const searchInput = await page.locator('input[type="text"]').first();
-      if (await searchInput.isVisible({ timeout: 5000 })) {
-        // Enter search keywords (try "roof" as primary keyword)
-        await searchInput.fill(keywords[0]);
-        console.log(`[Accela] Entered keyword: ${keywords[0]}`);
+      // Look for search form - try to submit without keywords to get ALL permits
+      // Accela portals typically have a search button that can be clicked without entering keywords
+      
+      // Try to find and click search/submit button directly (without entering keywords)
+      const searchButton = page.locator('input[type="submit"], button[type="submit"]').first();
+      if (await searchButton.isVisible({ timeout: 5000 })) {
+        console.log('[Accela] Clicking search button to get all building permits');
+        await searchButton.click();
         
-        // Find and click search button
-        const searchButton = page.locator('input[type="submit"], button[type="submit"]').first();
-        if (await searchButton.isVisible({ timeout: 2000 })) {
-          await searchButton.click();
-          console.log('[Accela] Clicked search button');
+        // Wait for results to load
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(2000);
+      } else {
+        // Fallback: Try to find search input and leave it empty, then search
+        const searchInput = await page.locator('input[type="text"]').first();
+        if (await searchInput.isVisible({ timeout: 5000 })) {
+          console.log('[Accela] Found search input - leaving empty to get all permits');
+          // Leave input empty - this should return all permits
           
-          // Wait for results to load
-          await page.waitForLoadState('networkidle');
-          await page.waitForTimeout(2000);
+          const submitBtn = page.locator('input[type="submit"], button[type="submit"]').first();
+          if (await submitBtn.isVisible({ timeout: 2000 })) {
+            await submitBtn.click();
+            console.log('[Accela] Clicked search button');
+            
+            // Wait for results to load
+            await page.waitForLoadState('networkidle');
+            await page.waitForTimeout(2000);
+          }
         }
       }
       

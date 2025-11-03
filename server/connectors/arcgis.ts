@@ -114,14 +114,12 @@ export class ArcGISConnector implements Connector {
     queryParams.set('resultRecordCount', String(params.limit));
     queryParams.set('orderByFields', 'OBJECTID');
 
-    // Add roofing filter
-    const roofingFilter =
-      "(UPPER(PermitType) LIKE '%ROOF%' OR UPPER(Description) LIKE '%ROOF%')";
-
+    // Don't filter by roofing here - get ALL building permits
+    // Our roofing classifier will filter them after ingestion
     if (params.where) {
-      queryParams.set('where', `(${params.where}) AND ${roofingFilter}`);
+      queryParams.set('where', params.where);
     } else {
-      queryParams.set('where', roofingFilter);
+      queryParams.set('where', '1=1'); // Get all records
     }
 
     return `${base}?${queryParams.toString()}`;
