@@ -130,19 +130,19 @@ export const permitsRelations = relations(permits, ({ one }) => ({
 }));
 
 // Insert schemas
-export const insertSourceSchema = createInsertSchema(sources, {
-  id: () => z.never(),
-  created_at: () => z.never(),
+export const insertSourceSchema = createInsertSchema(sources).omit({
+  id: true,
+  created_at: true,
 });
 
-export const insertSourceStateSchema = createInsertSchema(sourceState, {
-  id: () => z.never(),
-  updated_at: () => z.never(),
+export const insertSourceStateSchema = createInsertSchema(sourceState).omit({
+  id: true,
+  updated_at: true,
 });
 
-export const insertPermitSchema = createInsertSchema(permits, {
-  id: () => z.never(),
-  ingest_ts: () => z.never(),
+export const insertPermitSchema = createInsertSchema(permits).omit({
+  id: true,
+  ingest_ts: true,
 });
 
 // Select types
