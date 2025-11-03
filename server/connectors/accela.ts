@@ -207,8 +207,10 @@ export class AccelaConnector implements Connector {
     page: Page,
     config: AccelaConfig
   ): Promise<AccelaSearchResult[]> {
-    const results: AccelaSearchResult[] = [];
+    const allResults: AccelaSearchResult[] = [];
     const keywords = config.search_keywords || ['roof', 'reroof', 're-roof'];
+    const MAX_PAGES = 100; // Safety limit to prevent infinite loops
+    const MAX_PERMITS_PER_PAGE = 1000; // Increased from 50
     
     try {
       // Wait for page to be ready
@@ -236,13 +238,63 @@ export class AccelaConnector implements Connector {
         }
       }
       
-      // Parse results table
+      // Scrape all pages of results
+      let currentPage = 1;
+      let hasMore = true;
+      
+      while (hasMore && currentPage <= MAX_PAGES) {
+        console.log(`[Accela] Scraping page ${currentPage}...`);
+        
+        // Parse current page results
+        const pageResults = await this.parseResultsTable(page, config, MAX_PERMITS_PER_PAGE);
+        console.log(`[Accela] Page ${currentPage}: Found ${pageResults.length} permits`);
+        
+        allResults.push(...pageResults);
+        
+        // Try to find and click "Next" button for pagination
+        const nextButton = page.locator('a:has-text("Next"), input[value="Next"], button:has-text("Next")').first();
+        const hasNextButton = await nextButton.isVisible({ timeout: 2000 }).catch(() => false);
+        
+        if (hasNextButton) {
+          await nextButton.click();
+          await page.waitForLoadState('networkidle');
+          await page.waitForTimeout(1500);
+          currentPage++;
+        } else {
+          hasMore = false;
+          console.log('[Accela] No more pages found');
+        }
+        
+        // Safety: Stop if we're not finding new permits
+        if (pageResults.length === 0) {
+          hasMore = false;
+        }
+      }
+      
+      console.log(`[Accela] Scraped ${currentPage} pages, total ${allResults.length} permits`);
+      
+    } catch (error) {
+      console.error('[Accela] Search error:', error);
+      // If search fails, return what we have so far
+    }
+    
+    return allResults;
+  }
+
+  private async parseResultsTable(
+    page: Page,
+    config: AccelaConfig,
+    maxRows: number
+  ): Promise<AccelaSearchResult[]> {
+    const results: AccelaSearchResult[] = [];
+    
+    try {
       const tableHtml = await page.content();
       const $ = load(tableHtml);
       
       // Look for results table (common Accela patterns)
-      const rows = $('table tr').slice(1, 50); // Skip header, limit to 50 rows
-      console.log(`[Accela] Found ${rows.length} table rows to parse`);
+      // Increased limit significantly to get all rows
+      const rows = $('table tr').slice(1, maxRows + 1); // Skip header, get up to maxRows
       
       rows.each((i, row) => {
         const cells = $(row).find('td');
@@ -270,10 +322,8 @@ export class AccelaConnector implements Connector {
           });
         }
       });
-      
     } catch (error) {
-      console.error('[Accela] Search error:', error);
-      // If search fails, return empty results rather than throwing
+      console.error('[Accela] Table parsing error:', error);
     }
     
     return results;
