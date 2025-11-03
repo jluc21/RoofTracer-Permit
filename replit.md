@@ -10,7 +10,32 @@ Key capabilities include automated ingestion, intelligent roofing classification
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Critical Fixes (November 3, 2025)
+## Recent Developments (November 3, 2025)
+
+### Real-Time Progress Tracking - IMPLEMENTED ✅
+
+**Feature:** Live progress tracking during data ingestion with visual feedback and status updates.
+
+**Implementation:**
+1. **Database Schema** (`shared/schema.ts`) - Added progress tracking fields to `source_state`:
+   - `is_running` (integer, 0 or 1): Indicates if ingestion is currently running
+   - `status_message` (text): Current status message during ingestion  
+   - `current_page` (integer): Current page being scraped (for Accela pagination)
+
+2. **Backend Progress Updates** (`server/routes.ts`, `server/connectors/accela.ts`):
+   - Sets `is_running=1` and `status_message` when ingestion starts
+   - Updates progress every 10 permits during processing
+   - Updates status during Accela scraping: "Launching browser...", "Navigating to Accela portal...", "Scraping page X..."
+   - Sets `is_running=0` with completion message: "✓ Complete: X permits ingested, Y errors" or "✗ Failed: error message"
+
+3. **Frontend Real-Time Updates** (`client/src/pages/SourcesPage.tsx`, `client/src/components/SourceCard.tsx`):
+   - Polls `/api/sources/state` every 2 seconds when any source has `is_running=1`
+   - Shows toast notifications on state transitions (start and completion only, no spam during polling)
+   - Displays progress on source cards with spinner icon and status message box
+   - Disables all buttons while ingestion is running
+   - Uses state transition tracking (useRef) to prevent duplicate toast notifications
+
+**Result:** ✅ Users see live progress updates during ingestion with clear visual feedback. Tested with Sacramento County (29 permits) and City of Lincoln (27 permits).
 
 ### Data Display Issue - RESOLVED ✅
 
