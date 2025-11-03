@@ -1,14 +1,11 @@
-# Railway Nixpacks configuration - NUCLEAR CLEAN BUILD
-# This file is read by Railway's Nixpacks builder and CANNOT be ignored
+# Railway Nixpacks configuration - Skip optional dependencies to prevent Neon driver
+# The .npmrc file sets optional=false which prevents @neondatabase/serverless from installing
 
 [phases.setup]
 nixPkgs = ["nodejs_20", "npm-9_x"]
 
 [phases.install]
-# NUCLEAR: Delete ALL cached modules before install
 cmds = [
-  "rm -rf node_modules",
-  "rm -f package-lock.json",
   "npm install"
 ]
 
