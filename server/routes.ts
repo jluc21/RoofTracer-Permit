@@ -232,64 +232,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // TEMPORARY: Admin endpoint to add ArcGIS sources to production
-  app.post("/api/admin/add-arcgis-sources", async (_req, res) => {
+  // TEMPORARY: Admin endpoint to fix ArcGIS URLs in production
+  app.post("/api/admin/fix-arcgis-urls", async (_req, res) => {
     try {
       const allSources = await storage.getSources();
+      const updates: string[] = [];
       
-      // Check if Sacramento County ArcGIS already exists
-      const sacExists = allSources.some(s => 
+      // Find and fix Sacramento County ArcGIS
+      const sacSource = allSources.find(s => 
         s.platform === 'arcgis' && s.name.includes('Sacramento County')
       );
       
-      if (!sacExists) {
-        console.log("[Admin] Adding Sacramento County ArcGIS source...");
-        await storage.createSource({
-          name: "Sacramento County - All Building Permits (ArcGIS)",
-          platform: "arcgis",
-          endpoint_url: "https://services5.arcgis.com/54falWtcpty3V47Z/arcgis/rest/services/Building_Permit_Data_pub/FeatureServer/0",
-          config: { where_clause: "1=1" },
-          enabled: 1,
-          max_rows_per_run: 50000,
-          max_runtime_minutes: 60,
-        });
-        console.log("[Admin] ✓ Added Sacramento County ArcGIS");
+      if (sacSource) {
+        const correctUrl = "https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Permits/FeatureServer/0";
+        if (sacSource.endpoint_url !== correctUrl) {
+          console.log(`[Admin] Updating Sacramento County URL from ${sacSource.endpoint_url} to ${correctUrl}`);
+          await storage.updateSource(sacSource.id, {
+            endpoint_url: correctUrl,
+            config: { where_clause: "1=1" },
+          });
+          updates.push(`Updated Sacramento County URL to correct FeatureServer`);
+        }
       }
       
-      // Check if Placer County ArcGIS already exists
-      const placerExists = allSources.some(s => 
+      // Find and disable Placer County (invalid URL)
+      const placerSource = allSources.find(s => 
         s.platform === 'arcgis' && s.name.includes('Placer County')
       );
       
-      if (!placerExists) {
-        console.log("[Admin] Adding Placer County ArcGIS source...");
-        await storage.createSource({
-          name: "Placer County, CA - Active Building Permits (ArcGIS)",
-          platform: "arcgis",
-          endpoint_url: "https://services1.arcgis.com/gqsWuDm3XrqZRdD1/arcgis/rest/services/BuildingPermits/FeatureServer/1",
-          config: { where_clause: "PermitStatus = 'Active'" },
-          enabled: 1,
-          max_rows_per_run: 50000,
-          max_runtime_minutes: 60,
+      if (placerSource && placerSource.enabled) {
+        console.log(`[Admin] Disabling Placer County (invalid URL)`);
+        await storage.updateSource(placerSource.id, {
+          enabled: 0,
         });
-        console.log("[Admin] ✓ Added Placer County ArcGIS");
+        updates.push(`Disabled Placer County (invalid URL)`);
       }
       
       // Get updated sources
       const updatedSources = await storage.getSources();
+      const arcgisSources = updatedSources.filter(s => s.platform === 'arcgis');
       
       res.json({
         success: true,
-        message: `ArcGIS sources added successfully. Total sources: ${updatedSources.length}`,
-        sources: updatedSources.map(s => ({
+        message: updates.length > 0 ? updates.join('; ') : 'No updates needed',
+        updates,
+        arcgis_sources: arcgisSources.map(s => ({
           id: s.id,
           name: s.name,
-          platform: s.platform,
+          endpoint_url: s.endpoint_url,
           enabled: s.enabled === 1,
         })),
       });
     } catch (error) {
-      console.error("[Admin] Failed to add ArcGIS sources:", error);
+      console.error("[Admin] Failed to fix ArcGIS URLs:", error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
