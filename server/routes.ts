@@ -450,3 +450,68 @@ export async function runDeepIngestion(sourceId: number) {
     throw error;
   }
 }
+
+// TEMPORARY: Admin endpoint to add ArcGIS sources to production
+app.post("/api/admin/add-arcgis-sources", async (_req, res) => {
+  try {
+    const allSources = await storage.getSources();
+    
+    // Check if Sacramento County ArcGIS already exists
+    const sacExists = allSources.some(s => 
+      s.platform === 'arcgis' && s.name.includes('Sacramento County')
+    );
+    
+    if (!sacExists) {
+      console.log("[Admin] Adding Sacramento County ArcGIS source...");
+      await storage.createSource({
+        name: "Sacramento County - All Building Permits (ArcGIS)",
+        platform: "arcgis",
+        endpoint_url: "https://services5.arcgis.com/54falWtcpty3V47Z/arcgis/rest/services/Building_Permit_Data_pub/FeatureServer/0",
+        config: { where_clause: "1=1" },
+        enabled: 1,
+        max_rows_per_run: 50000,
+        max_runtime_minutes: 60,
+      });
+      console.log("[Admin] ✓ Added Sacramento County ArcGIS");
+    }
+    
+    // Check if Placer County ArcGIS already exists
+    const placerExists = allSources.some(s => 
+      s.platform === 'arcgis' && s.name.includes('Placer County')
+    );
+    
+    if (!placerExists) {
+      console.log("[Admin] Adding Placer County ArcGIS source...");
+      await storage.createSource({
+        name: "Placer County, CA - Active Building Permits (ArcGIS)",
+        platform: "arcgis",
+        endpoint_url: "https://services1.arcgis.com/gqsWuDm3XrqZRdD1/arcgis/rest/services/BuildingPermits/FeatureServer/1",
+        config: { where_clause: "PermitStatus = 'Active'" },
+        enabled: 1,
+        max_rows_per_run: 50000,
+        max_runtime_minutes: 60,
+      });
+      console.log("[Admin] ✓ Added Placer County ArcGIS");
+    }
+    
+    // Get updated sources
+    const updatedSources = await storage.getSources();
+    
+    res.json({
+      success: true,
+      message: `ArcGIS sources added successfully. Total sources: ${updatedSources.length}`,
+      sources: updatedSources.map(s => ({
+        id: s.id,
+        name: s.name,
+        platform: s.platform,
+        enabled: s.enabled === 1,
+      })),
+    });
+  } catch (error) {
+    console.error("[Admin] Failed to add ArcGIS sources:", error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
