@@ -1,0 +1,110 @@
+Fix ArcGIS ingestion so 150k+ permits actually ingest and show on the map. Current logs show “Invalid URL” from ArcGIS and the backfill never progresses. Please implement the following fixes, verify in production, and do not ask for confirmation.
+
+1) ArcGIS URL + metadata–driven pagination
+
+For each ArcGIS source, first fetch layer metadata:
+GET {endpoint_url}?f=json
+Use it to detect:
+
+maxRecordCount
+
+supportsPagination and supportsOrderBy
+
+field name for OBJECTID (often OBJECTID but confirm via fields in metadata)
+
+Build query params using URLSearchParams (no string concat) and ALWAYS:
+
+f=json
+
+outFields=*
+
+outSR=4326
+
+returnGeometry=true
+
+orderByFields=<OBJECTID> ASC (only if supported)
+
+where=<use config.where_clause if present, else 1=1>
+
+NEVER request resultRecordCount > maxRecordCount. Paginate with resultOffset in batches of maxRecordCount.
+
+If supportsPagination is false:
+
+Do a first call with returnIdsOnly=true to get all OBJECTIDs,
+
+Chunk them (e.g., 500–1000 IDs per request) and query via objectIds=<csv>.
+
+If GET keeps returning ArcGIS “Invalid URL” for long query strings, switch to POST (application/x-www-form-urlencoded) with the same params.
+
+2) Honor config.where_clause (don’t hardcode 1=1)
+
+The logs show:
+where_clause: "PermitStatus = 'Active'"
+but the constructed URL uses where=1=1. Wire where from config when provided.
+
+3) Fix connector initialization
+
+The log shows state=undefined, db=null. Ensure the ArcGIS connector is constructed with a valid DB pool and shared ingestion state. If the service creates connectors before the DB pool is ready, refactor so:
+
+db pool is created first,
+
+connectors receive that pool,
+
+then ingestion starts.
+
+4) Backoff & retry
+
+Keep existing exponentialBackoff, but fail fast on deterministic errors like “Invalid URL” (don’t retry the same broken URL).
+
+Log the final URL (or POST body) once per batch at info level (truncate long parts), and on error include the first 300 chars of the error JSON for quick triage.
+
+5) Safe high-volume ingest
+
+Batch insert rows into permits table (e.g., 500–1000 at a time).
+
+If lat/lon missing in the feature geometry, request geometry in WGS84 (outSR=4326) and parse geometry.x/geometry.y as lon/lat.
+
+Geocode only when geometry is missing (don’t geocode addresses that already have point geometry).
+
+Commit progress via a checkpoint (e.g., last OBJECTID ingested) to resume after restarts.
+
+6) Quick verification endpoints
+
+Add GET /api/debug/status with:
+
+{
+  "db": {"connected": true},
+  "tables": {"permits": <count>, "geocode_cache": <count>},
+  "ingest": {"sourcesEnabled": <n>, "lastSource": "<name>", "lastBatch": <n>, "lastError": null}
+}
+
+
+Add GET /api/permits?limit=20 returning an array with {id, lat, lon, address, issued_at}.
+
+If the frontend expects GeoJSON, also expose /api/permits.geojson.
+
+7) Acceptance criteria (must pass)
+
+ArcGIS connector fetches metadata, paginates by maxRecordCount, and does not error with “Invalid URL”.
+
+permits table count grows on each backfill sweep (check via /api/debug/status).
+
+/api/permits?limit=20 returns records with valid lat/lon.
+
+The map shows markers/clusters; add a small badge “Loaded: N permits” to confirm.
+
+No unhandled errors on the server during ingest.
+
+8) Deliverables
+
+Commit the code changes.
+
+Paste two curl commands I can run to verify:
+
+curl -s https://<your-app>/api/debug/status | jq
+
+curl -s 'https://<your-app>/api/permits?limit=5' | jq
+
+Brief summary of root cause and fixes applied (URL construction, where clause, pagination, db wiring).
+
+Proceed and complete.

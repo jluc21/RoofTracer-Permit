@@ -91,6 +91,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Debug status endpoint
+  app.get("/api/debug/status", async (_req, res) => {
+    try {
+      const stats = await storage.getPermitStats();
+      const geocodeCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(sql`geocode_cache`);
+      
+      const sources = await storage.getSources();
+      const enabledSources = sources.filter(s => s.enabled);
+      const states = await storage.getAllSourceStates();
+      
+      const lastRunState = states
+        .filter(s => s.last_sync_at)
+        .sort((a, b) => {
+          const dateA = a.last_sync_at ? new Date(a.last_sync_at).getTime() : 0;
+          const dateB = b.last_sync_at ? new Date(b.last_sync_at).getTime() : 0;
+          return dateB - dateA;
+        })[0];
+      
+      const lastSource = lastRunState 
+        ? sources.find(s => s.id === lastRunState.source_id)
+        : null;
+      
+      res.json({
+        db: { connected: true },
+        tables: {
+          permits: stats.total,
+          geocode_cache: Number(geocodeCount[0]?.count || 0),
+        },
+        ingest: {
+          sourcesEnabled: enabledSources.length,
+          lastSource: lastSource?.name || null,
+          lastBatch: lastRunState?.rows_upserted || null,
+          lastError: lastRunState?.status_message?.includes('✗') 
+            ? lastRunState.status_message 
+            : null,
+        },
+      });
+    } catch (error) {
+      res.status(500).json({
+        db: { connected: false },
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   // Get all source states
   app.get("/api/sources/state", async (_req, res) => {
     try {
