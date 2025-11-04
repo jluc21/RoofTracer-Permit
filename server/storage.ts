@@ -270,6 +270,17 @@ export class DatabaseStorage implements IStorage {
 
     return result?.max_id || null;
   }
+
+  async getSourcePermitCount(sourceId: number): Promise<number> {
+    const [result] = await db
+      .select({
+        count: sql<number>`count(*)::int`,
+      })
+      .from(permits)
+      .where(eq(permits.source_id, sourceId));
+
+    return result?.count || 0;
+  }
 }
 
 export const storage = new DatabaseStorage();

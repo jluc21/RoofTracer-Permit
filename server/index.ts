@@ -70,40 +70,75 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
   
-  // Auto-backfill enabled sources on startup (background task)
+  // Continuous auto-backfill loop - runs enabled sources until exhausted, then repeats
   setImmediate(async () => {
-    try {
-      const { storage } = await import("./storage");
-      const sources = await storage.getSources();
-      const enabledSources = sources.filter(s => s.enabled);
-      
-      if (enabledSources.length > 0) {
-        console.log(`[auto-backfill] Starting automatic backfill for ${enabledSources.length} enabled sources...`);
-        
-        for (const source of enabledSources) {
-          // Check if this source has already been ingested
-          const state = await storage.getSourceState(source.id);
-          const hasData = state && state.rows_upserted && state.rows_upserted > 0;
+    const { storage } = await import("./storage");
+    const { runIngestion } = await import("./routes");
+    
+    // Background loop that continuously backfills enabled sources
+    const runContinuousBackfill = async () => {
+      while (true) {
+        try {
+          const sources = await storage.getSources();
+          const enabledSources = sources.filter(s => s.enabled);
           
-          if (!hasData) {
-            console.log(`[auto-backfill] Triggering backfill for: ${source.name}`);
-            // Trigger backfill via internal API call
-            const { runIngestion } = await import("./routes");
-            setImmediate(async () => {
-              try {
-                await runIngestion(source.id, "backfill");
-              } catch (error) {
-                console.error(`[auto-backfill] Failed for ${source.name}:`, error);
+          if (enabledSources.length > 0) {
+            console.log(`[auto-backfill] Starting continuous backfill sweep for ${enabledSources.length} enabled sources...`);
+            
+            for (const source of enabledSources) {
+              const maxRows = source.max_rows_per_run || 50000;
+              
+              while (true) {
+                // Get current permit count for logging
+                const beforeCount = await storage.getSourcePermitCount(source.id);
+                
+                // Run a backfill batch
+                console.log(`[auto-backfill] Running backfill for: ${source.name}`);
+                try {
+                  await runIngestion(source.id, "backfill");
+                } catch (error) {
+                  console.error(`[auto-backfill] Failed for ${source.name}:`, error);
+                  // Wait 30 seconds and retry same source
+                  await new Promise(resolve => setTimeout(resolve, 30 * 1000));
+                  continue; // Retry same source after error
+                }
+                
+                // Check source state to see how many rows were FETCHED from API (not just saved after dedup)
+                const state = await storage.getSourceState(source.id);
+                const rowsFetched = state?.rows_fetched || 0;
+                const rowsUpserted = state?.rows_upserted || 0;
+                const afterCount = await storage.getSourcePermitCount(source.id);
+                const permitsAdded = afterCount - beforeCount;
+                
+                console.log(`[auto-backfill] ${source.name}: Fetched ${rowsFetched}, saved ${permitsAdded} (${rowsUpserted - permitsAdded} duplicates), total: ${afterCount}`);
+                
+                // Source is exhausted if API returned fewer rows than maxRows (regardless of duplicates)
+                if (rowsFetched < maxRows) {
+                  console.log(`[auto-backfill] ${source.name} is up to date - API returned ${rowsFetched}/${maxRows} rows`);
+                  break; // Move to next source
+                }
+                
+                // Small delay between batches to avoid overwhelming the API
+                await new Promise(resolve => setTimeout(resolve, 1000));
               }
-            });
-          } else {
-            console.log(`[auto-backfill] Skipping ${source.name} - already has ${state.rows_upserted} permits`);
+            }
+            
+            console.log(`[auto-backfill] Sweep complete. All enabled sources are up to date. Sleeping for 5 minutes...`);
           }
+          
+          // Sleep for 5 minutes before next sweep to check for new permits
+          await new Promise(resolve => setTimeout(resolve, 5 * 60 * 1000));
+          
+        } catch (error) {
+          console.error("[auto-backfill] Error during continuous backfill:", error);
+          // Sleep for 1 minute on error before retrying
+          await new Promise(resolve => setTimeout(resolve, 60 * 1000));
         }
       }
-    } catch (error) {
-      console.error("[auto-backfill] Error during automatic backfill:", error);
-    }
+    };
+    
+    // Start the continuous backfill loop
+    runContinuousBackfill();
   });
 
   // Health check endpoint

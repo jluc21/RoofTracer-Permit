@@ -147,8 +147,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const mode = (req.query.mode as string) || "incremental";
 
-      if (mode !== "backfill" && mode !== "incremental") {
-        return res.status(400).json({ error: "Invalid mode. Use 'backfill' or 'incremental'" });
+      if (mode !== "backfill" && mode !== "incremental" && mode !== "deep") {
+        return res.status(400).json({ error: "Invalid mode. Use 'backfill', 'incremental', or 'deep'" });
       }
 
       const source = await storage.getSource(id);
@@ -163,7 +163,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Run ingestion in background (non-blocking)
       setImmediate(async () => {
         try {
-          await runIngestion(source.id, mode as "backfill" | "incremental");
+          if (mode === "deep") {
+            await runDeepIngestion(source.id);
+          } else {
+            await runIngestion(source.id, mode as "backfill" | "incremental");
+          }
         } catch (error) {
           console.error(`Ingestion failed for source ${source.id}:`, error);
         }
@@ -382,6 +386,65 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
       source_id: sourceId,
       is_running: 0,
       status_message: `✗ Failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    });
+    
+    throw error;
+  }
+}
+
+// Deep ingestion - runs backfill in a loop until source is exhausted
+export async function runDeepIngestion(sourceId: number) {
+  const source = await storage.getSource(sourceId);
+  if (!source) {
+    throw new Error(`Source ${sourceId} not found`);
+  }
+
+  console.log(`[Deep Backfill] Starting deep backfill for source ${sourceId}: ${source.name}`);
+  
+  let runCount = 0;
+  let totalPermitsUpserted = 0;
+  const maxRows = source.max_rows_per_run || 50000;
+
+  try {
+    // Loop until we get fewer permits than the batch size
+    while (true) {
+      runCount++;
+      console.log(`[Deep Backfill] Run #${runCount} for source ${sourceId}`);
+      
+      const beforeCount = await storage.getSourcePermitCount(sourceId);
+      
+      // Run a single backfill batch
+      await runIngestion(sourceId, "backfill");
+      
+      const afterCount = await storage.getSourcePermitCount(sourceId);
+      const permitsAdded = afterCount - beforeCount;
+      totalPermitsUpserted += permitsAdded;
+      
+      console.log(`[Deep Backfill] Run #${runCount}: Added ${permitsAdded} permits (total: ${totalPermitsUpserted})`);
+      
+      // If we got fewer permits than maxRows, we've exhausted the source
+      if (permitsAdded < maxRows) {
+        console.log(`[Deep Backfill] Source ${sourceId} exhausted after ${runCount} runs. Total: ${totalPermitsUpserted} permits`);
+        break;
+      }
+      
+      // Small delay between runs to avoid overwhelming the API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // Update final status
+    await storage.upsertSourceState({
+      source_id: sourceId,
+      status_message: `✓ Deep backfill complete: ${totalPermitsUpserted} total permits ingested in ${runCount} runs`,
+    });
+    
+  } catch (error) {
+    console.error(`[Deep Backfill] Failed for source ${sourceId}:`, error);
+    
+    await storage.upsertSourceState({
+      source_id: sourceId,
+      is_running: 0,
+      status_message: `✗ Deep backfill failed after ${runCount} runs: ${error instanceof Error ? error.message : 'Unknown error'}`,
     });
     
     throw error;

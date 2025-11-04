@@ -51,7 +51,7 @@ export class ArcGISConnector implements Connector {
       : null;
     
     let offset = 0;
-    const limit = 1000;
+    const limit = 50000; // Increased from 1000 to 50k for faster bulk ingestion
     let fetched = 0;
     let maxObjectId = startingObjectId;
 
@@ -115,7 +115,7 @@ export class ArcGISConnector implements Connector {
       : null;
 
     let offset = 0;
-    const limit = 1000;
+    const limit = 50000; // Increased from 1000 to 50k for faster bulk ingestion
     let fetched = 0;
     let maxObjectId = startingObjectId;
 
