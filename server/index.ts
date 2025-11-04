@@ -53,18 +53,29 @@ app.use((req, res, next) => {
   // Initialize database schema and seed sources
   await initializeDatabase();
   
-  // Migration: Enable Sacramento area ArcGIS sources only (Accela requires Playwright fix)
+  // Migration: Disable Accela sources (Playwright broken), Enable ArcGIS sources
   const { storage } = await import("./storage");
-  const sacSources = await storage.getSources();
-  const toEnable = sacSources.filter(s => 
+  const allSources = await storage.getSources();
+  
+  // DISABLE all Accela sources (Playwright version mismatch in production)
+  const accelaToDisable = allSources.filter(s => s.platform === 'accela' && s.enabled === 1);
+  if (accelaToDisable.length > 0) {
+    console.log(`[migration] Disabling ${accelaToDisable.length} Accela sources (Playwright broken)...`);
+    for (const source of accelaToDisable) {
+      await storage.updateSource(source.id, { enabled: 0 });
+      console.log(`[migration] ✓ Disabled: ${source.name}`);
+    }
+  }
+  
+  // ENABLE Sacramento area ArcGIS sources
+  const arcgisToEnable = allSources.filter(s => 
     s.platform === 'arcgis' && 
     (s.name.includes('Sacramento') || s.name.includes('Placer')) && 
     s.enabled === 0
   );
-  
-  if (toEnable.length > 0) {
-    console.log(`[migration] Enabling ${toEnable.length} ArcGIS sources for Sacramento area...`);
-    for (const source of toEnable) {
+  if (arcgisToEnable.length > 0) {
+    console.log(`[migration] Enabling ${arcgisToEnable.length} ArcGIS sources...`);
+    for (const source of arcgisToEnable) {
       await storage.updateSource(source.id, { enabled: 1 });
       console.log(`[migration] ✓ Enabled: ${source.name}`);
     }
