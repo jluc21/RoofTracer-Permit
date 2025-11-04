@@ -1,0 +1,66 @@
+Starting Container
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5)
+Node.js v20.18.0
+file:///app/dist/index.js:2043
+    app.post("/api/admin/add-arcgis-sources", async (_req, res) => {
+    ^
+ReferenceError: app is not defined
+    at server/routes.ts (file:///app/dist/index.js:2043:5)
+    at __init (file:///app/dist/index.js:4:56)
+    at file:///app/dist/index.js:2101:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+file:///app/dist/index.js:2043
+    app.post("/api/admin/add-arcgis-sources", async (_req, res) => {
+    ^
+ReferenceError: app is not defined
+    at server/routes.ts (file:///app/dist/index.js:2043:5)
+    at __init (file:///app/dist/index.js:4:56)
+    at file:///app/dist/index.js:2101:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5)
+Node.js v20.18.0
+file:///app/dist/index.js:2043
+    app.post("/api/admin/add-arcgis-sources", async (_req, res) => {
+    ^
+ReferenceError: app is not defined
+    at server/routes.ts (file:///app/dist/index.js:2043:5)
+    at __init (file:///app/dist/index.js:4:56)
+    at file:///app/dist/index.js:2101:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5)
+Node.js v20.18.0
+file:///app/dist/index.js:2043
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5)
+    app.post("/api/admin/add-arcgis-sources", async (_req, res) => {
+Node.js v20.18.0
+    ^
+ReferenceError: app is not defined
+    at server/routes.ts (file:///app/dist/index.js:2043:5)
+    at __init (file:///app/dist/index.js:4:56)
+    at file:///app/dist/index.js:2101:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+    app.post("/api/admin/add-arcgis-sources", async (_req, res) => {
+    ^
+ReferenceError: app is not defined
+    at server/routes.ts (file:///app/dist/index.js:2043:5)
+    at __init (file:///app/dist/index.js:4:56)
+    at file:///app/dist/index.js:2101:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5)
+Node.js v20.18.0
+file:///app/dist/index.js:2043
+file:///app/dist/index.js:2043
+    app.post("/api/admin/add-arcgis-sources", async (_req, res) => {
+    ^
+ReferenceError: app is not defined
+    at server/routes.ts (file:///app/dist/index.js:2043:5)
+    at __init (file:///app/dist/index.js:4:56)
+    at file:///app/dist/index.js:2101:1
+    at ModuleJob.run (node:internal/modules/esm/module_job:234:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:473:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5)
