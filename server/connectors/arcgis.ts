@@ -153,15 +153,22 @@ export class ArcGISConnector implements Connector {
   ): NormalizedPermit {
     const attrs = feature.attributes || {};
 
-    // Common ArcGIS field mappings
-    const permitType = attrs.PermitType || attrs.PERMIT_TYPE || attrs.TYPE || null;
+    // Common ArcGIS field mappings with fallbacks for non-standard naming
+    const permitType = attrs.PermitType || attrs.PERMIT_TYPE || attrs.TYPE || 
+                       attrs.PermitTypeDesc || attrs.ActiveBuilding_ExcelToTable_Sco || null;
     const workDescription =
-      attrs.Description || attrs.DESCRIPTION || attrs.WorkDescription || null;
-    const permitStatus = attrs.Status || attrs.STATUS || attrs.PermitStatus || null;
-    const issueDate = attrs.IssueDate || attrs.ISSUE_DATE || attrs.IssuedDate || null;
+      attrs.Description || attrs.DESCRIPTION || attrs.WorkDescription || 
+      attrs.ActiveBuilding_ExcelToTable_Des || null;
+    const permitStatus = attrs.Status || attrs.STATUS || attrs.PermitStatus || 
+                         attrs.ActiveBuilding_ExcelToTable_Sta || null;
+    const issueDate = attrs.IssueDate || attrs.ISSUE_DATE || attrs.IssuedDate || 
+                      attrs.APPLIED_DATE || attrs.ActiveBuilding_ExcelToTable_Dat || null;
     const addressRaw =
-      attrs.Address || attrs.ADDRESS || attrs.SiteAddress || attrs.FullAddress || null;
-    const parcelId = attrs.ParcelID || attrs.PARCEL_ID || attrs.APN || null;
+      attrs.Address || attrs.ADDRESS || attrs.SiteAddress || attrs.FullAddress || 
+      attrs.ActiveBuilding_ExcelToTable_Add || null;
+    const parcelId = attrs.ParcelID || attrs.PARCEL_ID || attrs.APN || 
+                     attrs.ActiveBuilding_ExcelToTable_APN || 
+                     attrs.ASSESSORS_Parcel_point_APN || null;
     const ownerName = attrs.Owner || attrs.OWNER || attrs.OwnerName || null;
     const contractorName =
       attrs.Contractor || attrs.CONTRACTOR || attrs.ContractorName || null;

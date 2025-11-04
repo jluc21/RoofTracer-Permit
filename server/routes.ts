@@ -261,6 +261,9 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
   } else if (source.platform === "accela") {
     const { AccelaConnector } = await import("./connectors/accela");
     connector = new AccelaConnector(source.max_requests_per_minute || 10);
+  } else if (source.platform === "etrakit") {
+    const { eTRAKiTConnector } = await import("./connectors/etrakit");
+    connector = new eTRAKiTConnector(source.max_requests_per_minute || 10);
   } else {
     throw new Error(`Unsupported platform: ${source.platform}`);
   }
