@@ -1,0 +1,74 @@
+Goal: Fix the bad ArcGIS source rows in sources on Railway, add a status endpoint, and trigger ingestion—no shell/psql required.
+
+Do the following exactly:
+
+Create an env-gated admin token
+
+Add ADMIN_TOKEN to .env (read from process.env.ADMIN_TOKEN). Do not hardcode a token. If unset, reject admin calls.
+
+Add these routes in server/routes.ts (or equivalent)
+
+GET /api/debug/status → returns:
+
+db.connected boolean
+
+counts for permits, geocode_cache, sources
+
+list of enabled sources with id, name, platform, endpoint_url
+
+last ingestor batch/error if available
+
+POST /api/admin/fix-sources (requires Authorization: Bearer <ADMIN_TOKEN>) → run the following parameterized SQL updates inside a single transaction:
+
+-- Fix Sacramento County (all permits) to the correct FeatureServer layer 0
+UPDATE sources
+SET endpoint_url = 'https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Permits/FeatureServer/0',
+    platform     = 'arcgis'
+WHERE id = 5;
+
+-- Disable Placer County source until a valid endpoint is provided
+UPDATE sources
+SET enabled = FALSE
+WHERE id = 6;
+
+-- Normalize any bad where_clause JSON blobs to just the condition (optional safety)
+UPDATE sources
+SET config = jsonb_set(
+    COALESCE(config,'{}'::jsonb),
+    '{where_clause}',
+    to_jsonb(COALESCE((config->>'where_clause')::text, '1=1'))
+)
+WHERE platform='arcgis';
+
+
+Return a JSON summary of rows affected.
+
+POST /api/admin/run-backfill (requires same auth) → immediately kick the backfill loop once (re-use your existing runIngestion/runContinuousBackfill entry point without spawning duplicates; guard with a simple in-progress flag).
+
+Harden routes
+
+All /api/admin/* routes must:
+
+Check Authorization: Bearer <ADMIN_TOKEN>
+
+Respond 401 if missing/invalid
+
+No arbitrary SQL allowed—only the hardcoded updates above.
+
+Logs
+
+Log concise lines when /api/admin/fix-sources and /api/admin/run-backfill execute (idempotent).
+
+Verification
+
+Ensure GET /api/debug/status returns correct counts and shows sources.id=5 with the corrected URL and sources.id=6 disabled.
+
+Build and run: prod build still starts on port from env, health at /health.
+
+After coding, output the exact cURL commands I can run to:
+
+hit /api/debug/status
+
+call /api/admin/fix-sources
+
+call /api/admin/run-backfill
