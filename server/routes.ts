@@ -279,6 +279,7 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
   let errors = 0;
   let lastIssueDate: string | null = null;
   let lastTimestamp: string | null = null;
+  let maxObjectId: number | null = null;
 
   const startTime = Date.now();
 
@@ -336,9 +337,15 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
         await storage.upsertPermit(permitData);
         rowsUpserted++;
 
-        // Track latest dates for incremental sync
+        // Track latest dates and OBJECTID for incremental sync
         if (normalized.issue_date && (!lastIssueDate || normalized.issue_date > lastIssueDate)) {
           lastIssueDate = normalized.issue_date;
+        }
+        
+        // Track max OBJECTID from provenance (ArcGIS sources)
+        const provenanceObjectId = (normalized.provenance as any)?.max_objectid;
+        if (provenanceObjectId && (!maxObjectId || provenanceObjectId > maxObjectId)) {
+          maxObjectId = provenanceObjectId;
         }
       } catch (error) {
         errors++;
@@ -353,7 +360,7 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
     await storage.upsertSourceState({
       source_id: sourceId,
       last_max_timestamp: lastTimestamp || state.last_max_timestamp || null,
-      last_max_objectid: state.last_max_objectid || null,
+      last_max_objectid: maxObjectId || state.last_max_objectid || null,
       last_issue_date: lastIssueDate || state.last_issue_date || null,
       etag: state.etag || null,
       checksum: state.checksum || null,

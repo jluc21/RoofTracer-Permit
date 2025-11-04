@@ -32,22 +32,41 @@ export class ArcGISConnector implements Connector {
     state: ConnectorState,
     maxRows: number
   ): AsyncIterableIterator<NormalizedPermit> {
+    // Resume from last OBJECTID if we have state, otherwise start fresh
+    const whereClause = state.last_max_objectid
+      ? `OBJECTID > ${state.last_max_objectid}`
+      : null;
+    
     let offset = 0;
     const limit = 1000;
     let fetched = 0;
+    let maxObjectId = state.last_max_objectid || 0;
 
     while (fetched < maxRows) {
       await this.rateLimiter.waitIfNeeded();
 
       const batchLimit = Math.min(limit, maxRows - fetched);
-      const url = this.buildArcGISUrl(config, { offset, limit: batchLimit });
+      const url = this.buildArcGISUrl(config, { 
+        offset, 
+        limit: batchLimit,
+        where: whereClause 
+      });
 
       const response = await exponentialBackoff(() => this.fetchArcGIS(url));
 
       if (!response.features || response.features.length === 0) break;
 
       for (const feature of response.features) {
-        yield this.normalize(sourceId, sourceName, config, feature);
+        // Track the maximum OBJECTID seen
+        const objectId = feature.attributes?.OBJECTID;
+        if (objectId && objectId > maxObjectId) {
+          maxObjectId = objectId;
+        }
+        
+        const normalized = this.normalize(sourceId, sourceName, config, feature);
+        // Store the max OBJECTID in provenance for state tracking
+        (normalized.provenance as any).max_objectid = maxObjectId;
+        yield normalized;
       }
 
       fetched += response.features.length;
