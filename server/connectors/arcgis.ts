@@ -8,6 +8,7 @@ import type {
 import { RateLimiter, exponentialBackoff } from './base';
 import { classifyAsRoofing } from '../normalization/classifier';
 import { generateFingerprint } from '../normalization/fingerprint';
+import { storage } from '../storage';
 
 export class ArcGISConnector implements Connector {
   private rateLimiter: RateLimiter;
@@ -32,15 +33,27 @@ export class ArcGISConnector implements Connector {
     state: ConnectorState,
     maxRows: number
   ): AsyncIterableIterator<NormalizedPermit> {
-    // Resume from last OBJECTID if we have state, otherwise start fresh
-    const whereClause = state.last_max_objectid
-      ? `OBJECTID > ${state.last_max_objectid}`
+    // UNIVERSAL DEDUPLICATION: Query database for the actual maximum OBJECTID we have
+    const dbMaxObjectId = await storage.getMaxSourceRecordId(sourceId);
+    
+    // Use whichever is higher: state tracking or database reality
+    // This handles old permits that don't have max_objectid in provenance
+    const startingObjectId = Math.max(
+      state.last_max_objectid || 0,
+      dbMaxObjectId || 0
+    );
+    
+    console.log(`[ArcGIS] Source ${sourceId}: state=${state.last_max_objectid}, db=${dbMaxObjectId}, starting from=${startingObjectId}`);
+    
+    // Resume from the highest OBJECTID we know about
+    const whereClause = startingObjectId > 0
+      ? `OBJECTID > ${startingObjectId}`
       : null;
     
     let offset = 0;
     const limit = 1000;
     let fetched = 0;
-    let maxObjectId = state.last_max_objectid || 0;
+    let maxObjectId = startingObjectId;
 
     while (fetched < maxRows) {
       await this.rateLimiter.waitIfNeeded();
@@ -83,9 +96,20 @@ export class ArcGISConnector implements Connector {
     state: ConnectorState,
     maxRows: number
   ): AsyncIterableIterator<NormalizedPermit> {
-    // Use last_max_objectid or last_max_timestamp for incremental
-    const whereClause = state.last_max_objectid
-      ? `OBJECTID > ${state.last_max_objectid}`
+    // UNIVERSAL DEDUPLICATION: Query database for the actual maximum OBJECTID we have
+    const dbMaxObjectId = await storage.getMaxSourceRecordId(sourceId);
+    
+    // Use whichever is higher: state tracking or database reality
+    const startingObjectId = Math.max(
+      state.last_max_objectid || 0,
+      dbMaxObjectId || 0
+    );
+    
+    console.log(`[ArcGIS Incremental] Source ${sourceId}: state=${state.last_max_objectid}, db=${dbMaxObjectId}, starting from=${startingObjectId}`);
+    
+    // Use OBJECTID if we have it, otherwise fall back to timestamp
+    const whereClause = startingObjectId > 0
+      ? `OBJECTID > ${startingObjectId}`
       : state.last_max_timestamp
       ? `lastEditDate > timestamp '${state.last_max_timestamp}'`
       : null;
@@ -93,7 +117,7 @@ export class ArcGISConnector implements Connector {
     let offset = 0;
     const limit = 1000;
     let fetched = 0;
-    let maxObjectId = state.last_max_objectid || 0;
+    let maxObjectId = startingObjectId;
 
     while (fetched < maxRows) {
       await this.rateLimiter.waitIfNeeded();

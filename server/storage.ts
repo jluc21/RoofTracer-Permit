@@ -43,6 +43,7 @@ export interface IStorage {
   upsertPermit(permit: InsertPermit): Promise<Permit>;
   getPermitByFingerprint(fingerprint: string): Promise<Permit | undefined>;
   getPermitStats(): Promise<{ total: number; with_coords: number; roofing: number }>;
+  getMaxSourceRecordId(sourceId: number): Promise<number | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -254,6 +255,20 @@ export class DatabaseStorage implements IStorage {
       with_coords: result?.with_coords || 0,
       roofing: result?.roofing || 0,
     };
+  }
+
+  async getMaxSourceRecordId(sourceId: number): Promise<number | null> {
+    // Query the maximum source_record_id for this source
+    // source_record_id is stored as a string but for ArcGIS it's the OBJECTID (integer)
+    // Must cast to integer BEFORE taking MAX, otherwise "999" > "6621" alphabetically!
+    const [result] = await db
+      .select({
+        max_id: sql<number>`MAX(CAST(${permits.source_record_id} AS INTEGER))`,
+      })
+      .from(permits)
+      .where(eq(permits.source_id, sourceId));
+
+    return result?.max_id || null;
   }
 }
 
