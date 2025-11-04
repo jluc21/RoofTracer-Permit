@@ -53,15 +53,17 @@ app.use((req, res, next) => {
   // Initialize database schema and seed sources
   await initializeDatabase();
   
-  // Migration: Enable Sacramento/Lincoln sources for Playwright
+  // Migration: Enable Sacramento area ArcGIS sources only (Accela requires Playwright fix)
   const { storage } = await import("./storage");
   const sacSources = await storage.getSources();
   const toEnable = sacSources.filter(s => 
-    (s.name.includes('Sacramento County') || s.name.includes('Lincoln')) && s.enabled === 0
+    s.platform === 'arcgis' && 
+    (s.name.includes('Sacramento') || s.name.includes('Placer')) && 
+    s.enabled === 0
   );
   
   if (toEnable.length > 0) {
-    console.log(`[migration] Enabling ${toEnable.length} Sacramento area sources...`);
+    console.log(`[migration] Enabling ${toEnable.length} ArcGIS sources for Sacramento area...`);
     for (const source of toEnable) {
       await storage.updateSource(source.id, { enabled: 1 });
       console.log(`[migration] ✓ Enabled: ${source.name}`);
