@@ -87,6 +87,8 @@ app.use((req, res, next) => {
             
             for (const source of enabledSources) {
               const maxRows = source.max_rows_per_run || 50000;
+              let consecutiveZeroSaves = 0;
+              const MAX_CONSECUTIVE_ZERO_SAVES = 3; // Stop after 3 full batches with 0 new permits
               
               while (true) {
                 // Get current permit count for logging
@@ -111,6 +113,19 @@ app.use((req, res, next) => {
                 const permitsAdded = afterCount - beforeCount;
                 
                 console.log(`[auto-backfill] ${source.name}: Fetched ${rowsFetched}, saved ${permitsAdded} (${rowsUpserted - permitsAdded} duplicates), total: ${afterCount}`);
+                
+                // Track consecutive batches with zero new permits
+                if (permitsAdded === 0 && rowsFetched >= maxRows) {
+                  consecutiveZeroSaves++;
+                  console.log(`[auto-backfill] ${source.name}: ${consecutiveZeroSaves}/${MAX_CONSECUTIVE_ZERO_SAVES} consecutive zero-save batches`);
+                  
+                  if (consecutiveZeroSaves >= MAX_CONSECUTIVE_ZERO_SAVES) {
+                    console.log(`[auto-backfill] ${source.name} exhausted - ${MAX_CONSECUTIVE_ZERO_SAVES} consecutive batches with all duplicates`);
+                    break; // Move to next source
+                  }
+                } else {
+                  consecutiveZeroSaves = 0; // Reset if we saved any permits
+                }
                 
                 // Source is exhausted if API returned fewer rows than maxRows (regardless of duplicates)
                 if (rowsFetched < maxRows) {
