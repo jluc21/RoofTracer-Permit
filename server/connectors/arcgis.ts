@@ -93,6 +93,7 @@ export class ArcGISConnector implements Connector {
     let offset = 0;
     const limit = 1000;
     let fetched = 0;
+    let maxObjectId = state.last_max_objectid || 0;
 
     while (fetched < maxRows) {
       await this.rateLimiter.waitIfNeeded();
@@ -109,7 +110,16 @@ export class ArcGISConnector implements Connector {
       if (!response.features || response.features.length === 0) break;
 
       for (const feature of response.features) {
-        yield this.normalize(sourceId, sourceName, config, feature);
+        // Track the maximum OBJECTID seen
+        const objectId = feature.attributes?.OBJECTID;
+        if (objectId && objectId > maxObjectId) {
+          maxObjectId = objectId;
+        }
+        
+        const normalized = this.normalize(sourceId, sourceName, config, feature);
+        // Store the max OBJECTID in provenance for state tracking
+        (normalized.provenance as any).max_objectid = maxObjectId;
+        yield normalized;
       }
 
       fetched += response.features.length;

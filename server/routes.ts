@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { SocrataConnector } from "./connectors/socrata";
 import { ArcGISConnector } from "./connectors/arcgis";
+import type { ConnectorState } from "./connectors/base";
 import type { InsertPermit } from "@shared/schema";
 
 // Application version
@@ -238,19 +239,15 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
     throw new Error(`Source ${sourceId} not found`);
   }
 
-  const state = (await storage.getSourceState(sourceId)) || {
-    source_id: sourceId,
-    last_max_timestamp: undefined,
-    last_max_objectid: undefined,
-    last_issue_date: undefined,
-    etag: undefined,
-    checksum: undefined,
-    last_sync_at: undefined,
-    rows_fetched: 0,
-    rows_upserted: 0,
-    errors: 0,
-    freshness_seconds: undefined,
-    updated_at: new Date(),
+  const dbState = await storage.getSourceState(sourceId);
+  
+  // Convert database state to ConnectorState (Date -> string)
+  const state: ConnectorState = {
+    last_max_timestamp: dbState?.last_max_timestamp?.toISOString(),
+    last_max_objectid: dbState?.last_max_objectid ?? undefined,
+    last_issue_date: dbState?.last_issue_date ?? undefined,
+    etag: dbState?.etag ?? undefined,
+    checksum: dbState?.checksum ?? undefined,
   };
 
   let connector;
@@ -313,7 +310,7 @@ export async function runIngestion(sourceId: number, mode: "backfill" | "increme
         const permitData: InsertPermit = {
           source_id: normalized.source_id,
           source_name: normalized.source_name,
-          source_platform: normalized.source_platform,
+          source_platform: normalized.source_platform as any,
           source_record_id: normalized.source_record_id,
           permit_type: normalized.permit_type,
           work_description: normalized.work_description,
