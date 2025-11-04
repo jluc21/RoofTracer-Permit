@@ -5,10 +5,33 @@ import { SocrataConnector } from "./connectors/socrata";
 import { ArcGISConnector } from "./connectors/arcgis";
 import type { ConnectorState } from "./connectors/base";
 import type { InsertPermit } from "@shared/schema";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 // Application version
 const APP_VERSION = "1.0.0";
 const APP_START_TIME = Date.now();
+
+// Admin token authentication middleware
+const requireAdminToken = (req: any, res: any, next: any) => {
+  const adminToken = process.env.ADMIN_TOKEN;
+  
+  if (!adminToken) {
+    return res.status(503).json({ error: "Admin endpoints disabled - ADMIN_TOKEN not configured" });
+  }
+  
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Missing or invalid Authorization header" });
+  }
+  
+  const token = authHeader.substring(7);
+  if (token !== adminToken) {
+    return res.status(401).json({ error: "Invalid admin token" });
+  }
+  
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health endpoint
@@ -91,7 +114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Debug status endpoint
+  // Debug status endpoint - enhanced with sources list
   app.get("/api/debug/status", async (_req, res) => {
     try {
       const stats = await storage.getPermitStats();
@@ -99,8 +122,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .select({ count: sql<number>`count(*)` })
         .from(sql`geocode_cache`);
       
-      const sources = await storage.getSources();
-      const enabledSources = sources.filter(s => s.enabled);
+      const allSources = await storage.getSources();
+      const sourceCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(sql`sources`);
+      
+      const enabledSources = allSources.filter(s => s.enabled);
       const states = await storage.getAllSourceStates();
       
       const lastRunState = states
@@ -112,20 +139,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })[0];
       
       const lastSource = lastRunState 
-        ? sources.find(s => s.id === lastRunState.source_id)
+        ? allSources.find(s => s.id === lastRunState.source_id)
         : null;
       
       res.json({
         db: { connected: true },
-        tables: {
+        counts: {
           permits: stats.total,
           geocode_cache: Number(geocodeCount[0]?.count || 0),
+          sources: Number(sourceCount[0]?.count || 0),
         },
+        enabled_sources: enabledSources.map(s => ({
+          id: s.id,
+          name: s.name,
+          platform: s.platform,
+          endpoint_url: s.endpoint_url,
+        })),
         ingest: {
-          sourcesEnabled: enabledSources.length,
-          lastSource: lastSource?.name || null,
-          lastBatch: lastRunState?.rows_upserted || null,
-          lastError: lastRunState?.status_message?.includes('✗') 
+          last_source: lastSource?.name || null,
+          last_batch: lastRunState?.rows_upserted || null,
+          last_error: lastRunState?.status_message?.includes('✗') 
             ? lastRunState.status_message 
             : null,
         },
@@ -133,6 +166,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       res.status(500).json({
         db: { connected: false },
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Admin endpoint: Fix ArcGIS source URLs in production
+  app.post("/api/admin/fix-sources", requireAdminToken, async (_req, res) => {
+    try {
+      console.log("[admin] Executing fix-sources SQL updates...");
+      
+      // Run updates in a transaction
+      const result = await db.transaction(async (tx) => {
+        // Fix Sacramento County (id=5) to correct FeatureServer URL
+        const sacramentoUpdate = await tx.execute(
+          sql`UPDATE sources 
+              SET endpoint_url = 'https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Permits/FeatureServer/0',
+                  platform = 'arcgis'
+              WHERE id = 5`
+        );
+        
+        // Disable Placer County (id=6) until valid endpoint found
+        const placerUpdate = await tx.execute(
+          sql`UPDATE sources 
+              SET enabled = 0
+              WHERE id = 6`
+        );
+        
+        // Normalize where_clause in config for all ArcGIS sources
+        const configUpdate = await tx.execute(
+          sql`UPDATE sources
+              SET config = jsonb_set(
+                COALESCE(config,'{}'::jsonb),
+                '{where_clause}',
+                to_jsonb(COALESCE((config->>'where_clause')::text, '1=1'))
+              )
+              WHERE platform='arcgis'`
+        );
+        
+        return {
+          sacramento_rows_affected: sacramentoUpdate.rowCount || 0,
+          placer_rows_affected: placerUpdate.rowCount || 0,
+          config_normalized: configUpdate.rowCount || 0,
+        };
+      });
+      
+      console.log("[admin] fix-sources completed:", result);
+      
+      res.json({
+        success: true,
+        message: "ArcGIS sources fixed successfully",
+        rows_affected: result,
+      });
+    } catch (error) {
+      console.error("[admin] fix-sources failed:", error);
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Admin endpoint: Trigger manual backfill
+  app.post("/api/admin/run-backfill", requireAdminToken, async (_req, res) => {
+    try {
+      console.log("[admin] Manual backfill triggered");
+      
+      // Get all enabled sources
+      const sources = await storage.getSources();
+      const enabledSources = sources.filter(s => s.enabled);
+      
+      if (enabledSources.length === 0) {
+        return res.json({
+          success: true,
+          message: "No enabled sources to backfill",
+          sources_triggered: 0,
+        });
+      }
+      
+      // Trigger backfill for each enabled source (non-blocking)
+      setImmediate(async () => {
+        for (const source of enabledSources) {
+          try {
+            console.log(`[admin] Running backfill for: ${source.name}`);
+            await runIngestion(source.id, "backfill");
+          } catch (error) {
+            console.error(`[admin] Backfill failed for ${source.name}:`, error);
+          }
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: "Backfill started for enabled sources",
+        sources_triggered: enabledSources.length,
+        sources: enabledSources.map(s => ({ id: s.id, name: s.name })),
+      });
+    } catch (error) {
+      console.error("[admin] run-backfill failed:", error);
+      res.status(500).json({
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
