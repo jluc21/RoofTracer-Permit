@@ -155,6 +155,10 @@ export class ArcGISConnector implements Connector {
     config: ConnectorConfig,
     params: { offset: number; limit: number; where?: string | null }
   ): string {
+    console.log('[ArcGIS Debug] endpoint_url:', config.endpoint_url);
+    console.log('[ArcGIS Debug] layer_id:', config.layer_id);
+    console.log('[ArcGIS Debug] config:', JSON.stringify(config));
+    
     let baseUrl: string;
     
     // Check if endpoint_url already includes /FeatureServer/{layer}
@@ -163,9 +167,11 @@ export class ArcGISConnector implements Connector {
     if (featureServerMatch) {
       // URL already includes layer - just append /query
       baseUrl = `${config.endpoint_url}/query`;
+      console.log('[ArcGIS Debug] Using URL with embedded layer, baseUrl:', baseUrl);
     } else if (config.layer_id !== undefined) {
       // Old-style: separate layer_id in config
       baseUrl = `${config.endpoint_url}/FeatureServer/${config.layer_id}/query`;
+      console.log('[ArcGIS Debug] Using separate layer_id, baseUrl:', baseUrl);
     } else {
       throw new Error('Invalid URL: endpoint_url must include /FeatureServer/{layer} or layer_id must be provided');
     }
@@ -187,26 +193,36 @@ export class ArcGISConnector implements Connector {
       queryParams.set('where', '1=1'); // Get all records
     }
 
-    return `${baseUrl}?${queryParams.toString()}`;
+    const finalUrl = `${baseUrl}?${queryParams.toString()}`;
+    console.log('[ArcGIS Debug] Final constructed URL:', finalUrl);
+    return finalUrl;
   }
 
   private async fetchArcGIS(url: string): Promise<{ features: any[] }> {
+    console.log('[ArcGIS Debug] Fetching URL:', url);
     const response = await fetch(url, {
       headers: {
         'Accept': 'application/json',
       },
     });
 
+    console.log('[ArcGIS Debug] Response status:', response.status, response.statusText);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[ArcGIS Debug] Error response body:', errorText);
       throw new Error(`ArcGIS API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
+    console.log('[ArcGIS Debug] Response data keys:', Object.keys(data));
 
     if (data.error) {
-      throw new Error(`ArcGIS API error: ${data.error.message}`);
+      console.error('[ArcGIS Debug] API returned error:', JSON.stringify(data.error));
+      throw new Error(`ArcGIS API error: ${data.error.message || JSON.stringify(data.error)}`);
     }
 
+    console.log('[ArcGIS Debug] Features count:', data.features?.length || 0);
     return data;
   }
 
