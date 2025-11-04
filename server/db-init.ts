@@ -70,6 +70,14 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Add missing columns for live progress tracking (safe - won't fail if columns exist)
+    await db.execute(sql`
+      ALTER TABLE source_state 
+      ADD COLUMN IF NOT EXISTS is_running INTEGER DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS status_message TEXT,
+      ADD COLUMN IF NOT EXISTS current_page INTEGER DEFAULT 0
+    `);
+
     // Create permits table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS permits (
