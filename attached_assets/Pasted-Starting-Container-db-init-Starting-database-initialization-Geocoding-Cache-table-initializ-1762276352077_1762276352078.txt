@@ -1,0 +1,40 @@
+Starting Container
+[db-init] Starting database initialization...
+[Geocoding] Cache table initialized
+[db-init] Schema created successfully
+[db-init] Found 6 existing sources. Skipping seed.
+[db-init] Database initialization complete!
+5:10:45 PM [express] [express] serving on port 8080
+[auto-backfill] Starting continuous backfill sweep for 2 enabled sources...
+[auto-backfill] Running backfill for: Placer County, CA - Active Building Permits (ArcGIS)
+[ArcGIS] Source 6: state=undefined, db=null, starting from=0
+Ingestion failed for source 6: Error: ArcGIS API error: Invalid URL
+    at ArcGISConnector.fetchArcGIS (file:///app/dist/index.js:1001:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async exponentialBackoff (file:///app/dist/index.js:552:14)
+    at async ArcGISConnector.backfill (file:///app/dist/index.js:922:28)
+    at async runIngestion (file:///app/dist/index.js:1971:22)
+    at async runContinuousBackfill (file:///app/dist/index.js:2511:19)
+[auto-backfill] Failed for Placer County, CA - Active Building Permits (ArcGIS): Error: ArcGIS API error: Invalid URL
+    at ArcGISConnector.fetchArcGIS (file:///app/dist/index.js:1001:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async exponentialBackoff (file:///app/dist/index.js:552:14)
+    at async ArcGISConnector.backfill (file:///app/dist/index.js:922:28)
+    at async runIngestion (file:///app/dist/index.js:1971:22)
+    at async runContinuousBackfill (file:///app/dist/index.js:2511:19)
+[auto-backfill] Running backfill for: Placer County, CA - Active Building Permits (ArcGIS)
+[ArcGIS] Source 6: state=undefined, db=null, starting from=0
+Ingestion failed for source 6: Error: ArcGIS API error: Invalid URL
+    at ArcGISConnector.fetchArcGIS (file:///app/dist/index.js:1001:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async exponentialBackoff (file:///app/dist/index.js:552:14)
+    at async ArcGISConnector.backfill (file:///app/dist/index.js:922:28)
+    at async runIngestion (file:///app/dist/index.js:1971:22)
+    at async runContinuousBackfill (file:///app/dist/index.js:2511:19)
+[auto-backfill] Failed for Placer County, CA - Active Building Permits (ArcGIS): Error: ArcGIS API error: Invalid URL
+    at ArcGISConnector.fetchArcGIS (file:///app/dist/index.js:1001:17)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async exponentialBackoff (file:///app/dist/index.js:552:14)
+    at async ArcGISConnector.backfill (file:///app/dist/index.js:922:28)
+    at async runIngestion (file:///app/dist/index.js:1971:22)
+    at async runContinuousBackfill (file:///app/dist/index.js:2511:19)

@@ -21,9 +21,7 @@ export class ArcGISConnector implements Connector {
     if (!config.endpoint_url) {
       throw new Error('ArcGIS endpoint_url is required');
     }
-    if (!config.layer_id) {
-      throw new Error('ArcGIS layer_id is required');
-    }
+    // layer_id is optional - can be extracted from endpoint_url or provided separately
   }
 
   async *backfill(
@@ -157,7 +155,21 @@ export class ArcGISConnector implements Connector {
     config: ConnectorConfig,
     params: { offset: number; limit: number; where?: string | null }
   ): string {
-    const base = `${config.endpoint_url}/FeatureServer/${config.layer_id}/query`;
+    let baseUrl: string;
+    
+    // Check if endpoint_url already includes /FeatureServer/{layer}
+    const featureServerMatch = config.endpoint_url.match(/\/FeatureServer\/(\d+)$/);
+    
+    if (featureServerMatch) {
+      // URL already includes layer - just append /query
+      baseUrl = `${config.endpoint_url}/query`;
+    } else if (config.layer_id !== undefined) {
+      // Old-style: separate layer_id in config
+      baseUrl = `${config.endpoint_url}/FeatureServer/${config.layer_id}/query`;
+    } else {
+      throw new Error('Invalid URL: endpoint_url must include /FeatureServer/{layer} or layer_id must be provided');
+    }
+    
     const queryParams = new URLSearchParams();
 
     queryParams.set('outFields', '*');
@@ -175,7 +187,7 @@ export class ArcGISConnector implements Connector {
       queryParams.set('where', '1=1'); // Get all records
     }
 
-    return `${base}?${queryParams.toString()}`;
+    return `${baseUrl}?${queryParams.toString()}`;
   }
 
   private async fetchArcGIS(url: string): Promise<{ features: any[] }> {
